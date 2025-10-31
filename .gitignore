@@ -1,0 +1,137 @@
+# Dependencies
+node_modules/
+bower_components/
+vendor/
+target/
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build artifacts
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Coverage
+coverage/
+.nyc_output/
+*.lcov
+htmlcov/
+.coverage
+.coverage.*
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Database
+*.sqlite
+*.db
+*.sql
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.cert
+*.p12
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# Package managers
+package-lock.json
+yarn.lock
+Pipfile.lock
+poetry.lock
+
+# Testing
+.pytest_cache/
+.tox/
+
+# Java
+*.class
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+hs_err_pid*
+
+# Python
+venv/
+env/
+ENV/
+.venv
+.Python
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
+# Gradle
+.gradle/
+build/
+
+# Spring Boot
+HELP.md
+
+# Frontend
+build/
+.cache/
+.parcel-cache/
+dist/
+.nuxt/
+.next/
+out/
+
+# Miscellaneous
+*.orig
+.eslintcache
+.sass-cache/
