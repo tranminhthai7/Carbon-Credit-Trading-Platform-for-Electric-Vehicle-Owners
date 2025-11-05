@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { ITrip, tripSchema } from './trip.model';
 
 // Interface định nghĩa structure của Vehicle
 export interface IVehicle {
@@ -11,6 +12,9 @@ export interface IVehicle {
   vin?: string;
   color?: string;
   purchase_date?: Date;
+  trips: ITrip[];
+  total_distance_km: number;
+  total_co2_saved_kg: number;
 }
 
 // Mongoose Schema
@@ -68,6 +72,20 @@ const vehicleSchema = new Schema<IVehicle>(
     },
     purchase_date: {
       type: Date,
+    },
+    trips: {
+      type: [tripSchema],
+      default: [],
+    },
+    total_distance_km: {
+      type: Number,
+      default: 0,
+      min: [0, 'Total distance cannot be negative'],
+    },
+    total_co2_saved_kg: {
+      type: Number,
+      default: 0,
+      min: [0, 'Total CO2 saved cannot be negative'],
     },
   },
   {

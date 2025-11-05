@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { connectDatabase } from './config/database';
 import vehicleRoutes from './routes/vehicle.routes';
+import tripRoutes from './routes/trip.routes';
 
 // Load environment variables
 dotenv.config();
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/vehicles', tripRoutes); // Trip routes (Issue #6)
 
 // 404 handler
 app.use((req, res) => {
