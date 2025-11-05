@@ -1,0 +1,4 @@
+fastapi
+uvicorn
+pydantic
+# Thêm nếu cần: requests, sqlalchemy, etc.
