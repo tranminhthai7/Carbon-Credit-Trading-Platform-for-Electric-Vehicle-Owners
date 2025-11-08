@@ -48,6 +48,17 @@ desktop.ini
 *.jar
 *.war
 *.ear
+
+# Documentation - Local only (DO NOT COMMIT)
+*.md
+!LICENSE.md
+!CHANGELOG.md
+
+# Auto-generated files
+setup-github.ps1
+setup-github-simple.ps1
+frontend/src/app.js
+frontend/src/styles.css
 *.zip
 *.tar.gz
 *.rar
