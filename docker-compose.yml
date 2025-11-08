@@ -521,14 +521,30 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 3009 --reload
     restart: unless-stopped
 
-  # API Gateway (Nginx)
+  # API Gateway (Express)
   api-gateway:
-    image: nginx:alpine
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
     container_name: api-gateway
+    environment:
+      PORT: 8000
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:5173
+      USER_SERVICE_URL: http://user-service:3001
+      EV_DATA_SERVICE_URL: http://ev-data-service:3002
+      CARBON_CREDIT_SERVICE_URL: http://carbon-credit-service:3003
+      MARKETPLACE_SERVICE_URL: http://marketplace-service:3004
+      PAYMENT_SERVICE_URL: http://payment-service:3005
+      VERIFICATION_SERVICE_URL: http://verification-service:3006
+      NOTIFICATION_SERVICE_URL: http://notification-service:3007
+      REPORTING_SERVICE_URL: http://reporting-service:3008
+      AI_SERVICE_URL: http://ai-service:3009
     ports:
-      - "80:80"
+      - "8000:8000"
     volumes:
-      - ./api-gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./api-gateway:/app
+      - /app/node_modules
     depends_on:
       - user-service
       - ev-data-service
@@ -538,21 +554,23 @@ services:
       - verification-service
       - notification-service
       - reporting-service
-      - ai-service
     networks:
       - carbon-network
     restart: unless-stopped
 
-  # Frontend (React)
+  # Frontend (React + Vite)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
     environment:
-      REACT_APP_API_URL: http://localhost/api
+      VITE_API_URL: http://localhost:8000
     ports:
-      - "3000:80"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - api-gateway
     networks:
