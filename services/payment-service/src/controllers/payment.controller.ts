@@ -8,7 +8,7 @@ import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 
 const stripe = new Stripe(envConfig.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-10-29.clover',
+    apiVersion: '2023-08-16',
 });
 
 export class PaymentController {
