@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
 import { registerSchema, loginSchema } from '../validators/auth.validator';
@@ -31,9 +32,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(12);
-    const password_hash = await bcrypt.hash(password, salt);
+    // TEMP: Use crypto instead of bcrypt for dev (bcrypt too slow in Docker Windows)
+    // TODO: Switch back to bcrypt in production!
+    const password_hash = crypto.createHash('sha256').update(password + 'salt123').digest('hex');
 
     // Insert user
     const result = await query(
@@ -105,8 +106,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     const user = result.rows[0];
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    // TEMP: Verify password with crypto (matching registration)
+    const password_hash = crypto.createHash('sha256').update(password + 'salt123').digest('hex');
+    const isValidPassword = password_hash === user.password_hash;
+    
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
