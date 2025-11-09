@@ -17,7 +17,7 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json());
+// NOTE: DO NOT use express.json() - proxy needs to forward raw body stream
 
 // Service URLs from environment
 const services = {
@@ -33,12 +33,30 @@ const services = {
 };
 
 // Proxy options factory
-const createProxyOptions = (target: string): Options => ({
+const createProxyOptions = (target: string, servicePath: string): Options => ({
   target,
   changeOrigin: true,
+  timeout: 120000, // 120 seconds timeout
+  proxyTimeout: 120000,
+  ws: true, // WebSocket support
+  logLevel: 'debug', // Debug logging
   pathRewrite: (path) => {
-    // Remove /api prefix if exists
-    return path.replace(/^\/api/, '');
+    const rewritten = path.replace(new RegExp(`^/api${servicePath}`), '');
+    console.log(`[PROXY] Rewriting: ${path} -> ${rewritten}`);
+    return rewritten;
+  },
+  onProxyReq: (proxyReq, req, res) => {
+    console.log(`\n=== PROXY REQUEST ===`);
+    console.log(`Original: ${req.method} ${req.url}`);
+    console.log(`Target: ${proxyReq.method} ${proxyReq.path}`);
+    console.log(`Headers:`, proxyReq.getHeaders());
+    console.log(`Content-Type: ${req.headers['content-type']}`);
+    console.log(`Content-Length: ${req.headers['content-length']}`);
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    console.log(`\n=== PROXY RESPONSE ===`);
+    console.log(`Status: ${proxyRes.statusCode}`);
+    console.log(`Time: ${Date.now()}ms`);
   },
   onError: (err, req, res) => {
     console.error(`Proxy error for ${target}:`, err.message);
@@ -48,10 +66,6 @@ const createProxyOptions = (target: string): Options => ({
       message: 'Service temporarily unavailable',
       error: err.message
     });
-  },
-  onProxyReq: (proxyReq, req) => {
-    // Log proxy requests
-    console.log(`[PROXY] ${req.method} ${req.url} -> ${target}${req.url}`);
   }
 });
 
@@ -76,41 +90,41 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Route: User Service (Authentication, User Management)
-app.use('/api/users', createProxyMiddleware(createProxyOptions(services.user)));
-app.use('/api/auth', createProxyMiddleware(createProxyOptions(services.user)));
+app.use('/api/users', createProxyMiddleware(createProxyOptions(services.user, '/users')));
+app.use('/api/auth', createProxyMiddleware(createProxyOptions(services.user, '/auth')));
 
 // Route: EV Data Service (Vehicles, Trips, CO2 Calculation)
-app.use('/api/vehicles', createProxyMiddleware(createProxyOptions(services.evData)));
-app.use('/api/trips', createProxyMiddleware(createProxyOptions(services.evData)));
-app.use('/api/co2', createProxyMiddleware(createProxyOptions(services.evData)));
+app.use('/api/vehicles', createProxyMiddleware(createProxyOptions(services.evData, '/vehicles')));
+app.use('/api/trips', createProxyMiddleware(createProxyOptions(services.evData, '/trips')));
+app.use('/api/co2', createProxyMiddleware(createProxyOptions(services.evData, '/co2')));
 
 // Route: Carbon Credit Service (Wallet, Credits)
-app.use('/api/wallet', createProxyMiddleware(createProxyOptions(services.carbonCredit)));
-app.use('/api/credits', createProxyMiddleware(createProxyOptions(services.carbonCredit)));
+app.use('/api/wallet', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/wallet')));
+app.use('/api/credits', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/credits')));
 
 // Route: Marketplace Service (Listings, Orders, Auctions)
-app.use('/api/listings', createProxyMiddleware(createProxyOptions(services.marketplace)));
-app.use('/api/orders', createProxyMiddleware(createProxyOptions(services.marketplace)));
+app.use('/api/listings', createProxyMiddleware(createProxyOptions(services.marketplace, '/listings')));
+app.use('/api/orders', createProxyMiddleware(createProxyOptions(services.marketplace, '/orders')));
 
 // Route: Payment Service
-app.use('/api/payments', createProxyMiddleware(createProxyOptions(services.payment)));
-app.use('/api/transactions', createProxyMiddleware(createProxyOptions(services.payment)));
+app.use('/api/payments', createProxyMiddleware(createProxyOptions(services.payment, '/payments')));
+app.use('/api/transactions', createProxyMiddleware(createProxyOptions(services.payment, '/transactions')));
 
 // Route: Verification Service (CVA, KYC, Certificates)
-app.use('/api/verification', createProxyMiddleware(createProxyOptions(services.verification)));
-app.use('/api/kyc', createProxyMiddleware(createProxyOptions(services.verification)));
-app.use('/api/certificates', createProxyMiddleware(createProxyOptions(services.verification)));
-app.use('/api/issuances', createProxyMiddleware(createProxyOptions(services.verification)));
+app.use('/api/verification', createProxyMiddleware(createProxyOptions(services.verification, '/verification')));
+app.use('/api/kyc', createProxyMiddleware(createProxyOptions(services.verification, '/kyc')));
+app.use('/api/certificates', createProxyMiddleware(createProxyOptions(services.verification, '/certificates')));
+app.use('/api/issuances', createProxyMiddleware(createProxyOptions(services.verification, '/issuances')));
 
 // Route: Notification Service
-app.use('/api/notifications', createProxyMiddleware(createProxyOptions(services.notification)));
+app.use('/api/notifications', createProxyMiddleware(createProxyOptions(services.notification, '/notifications')));
 
 // Route: Reporting Service (Analytics, Reports)
-app.use('/api/reports', createProxyMiddleware(createProxyOptions(services.reporting)));
-app.use('/api/analytics', createProxyMiddleware(createProxyOptions(services.reporting)));
+app.use('/api/reports', createProxyMiddleware(createProxyOptions(services.reporting, '/reports')));
+app.use('/api/analytics', createProxyMiddleware(createProxyOptions(services.reporting, '/analytics')));
 
 // Route: AI Service (Price Prediction)
-app.use('/api/ai', createProxyMiddleware(createProxyOptions(services.ai)));
+app.use('/api/ai', createProxyMiddleware(createProxyOptions(services.ai, '/ai')));
 
 // 404 handler
 app.use((req: Request, res: Response) => {
