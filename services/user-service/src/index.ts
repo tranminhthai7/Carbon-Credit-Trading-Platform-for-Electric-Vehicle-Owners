@@ -39,8 +39,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Routes
-app.use('/api/users', authRoutes);
+// Routes - mount at root since API Gateway already handled /api/users prefix
+app.use('/', authRoutes);
 
 // Error handler
 app.use(errorHandler);
