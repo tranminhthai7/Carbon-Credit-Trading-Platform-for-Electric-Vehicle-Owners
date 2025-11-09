@@ -204,12 +204,10 @@ services:
 
   # User Service
   user-service:
-    build:
-      context: ./services/user-service
-      dockerfile: Dockerfile
+    image: user-service-prod:latest
     container_name: user-service
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: production
       PORT: 3001
       DB_HOST: user-db
       DB_PORT: 5432
@@ -233,10 +231,6 @@ services:
         condition: service_healthy
     networks:
       - carbon-network
-    volumes:
-      - ./services/user-service:/app
-      - /app/node_modules
-    command: npm run dev
     restart: unless-stopped
 
   # EV Data Service
@@ -523,13 +517,11 @@ services:
 
   # API Gateway (Express)
   api-gateway:
-    build:
-      context: ./api-gateway
-      dockerfile: Dockerfile
+    image: carbon-api-gateway:prod
     container_name: api-gateway
     environment:
       PORT: 8000
-      NODE_ENV: development
+      NODE_ENV: production
       CORS_ORIGIN: http://localhost:5173
       USER_SERVICE_URL: http://user-service:3001
       EV_DATA_SERVICE_URL: http://ev-data-service:3002
@@ -542,9 +534,6 @@ services:
       AI_SERVICE_URL: http://ai-service:3009
     ports:
       - "8000:8000"
-    volumes:
-      - ./api-gateway:/app
-      - /app/node_modules
     depends_on:
       - user-service
       - ev-data-service
@@ -560,17 +549,12 @@ services:
 
   # Frontend (React + Vite)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: carbon-frontend:latest
     container_name: frontend
     environment:
       VITE_API_URL: http://localhost:8000
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "5173:80"
     depends_on:
       - api-gateway
     networks:
