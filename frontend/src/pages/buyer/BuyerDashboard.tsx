@@ -26,19 +26,20 @@ import { StatsCard } from '../../components/common/StatsCard';
 import { useNavigate } from 'react-router-dom';
 import { Order, Certificate } from '../../types';
 
+// Interface cho thống kê dashboard của Buyer
 interface BuyerStats {
-  totalOrders: number;
-  totalSpent: number;
-  activeCertificates: number;
-  availableListings: number;
+  totalOrders: number;      // Tổng số đơn hàng
+  totalSpent: number;       // Tổng tiền đã chi
+  activeCertificates: number; // Số chứng chỉ đang hoạt động
+  availableListings: number;  // Số listing có sẵn
 }
 
 export const BuyerDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<BuyerStats | null>(null);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]); // Đơn hàng gần đây
+  const [certificates, setCertificates] = useState<Certificate[]>([]); // Chứng chỉ carbon credit
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
@@ -88,6 +89,7 @@ export const BuyerDashboard: React.FC = () => {
 
   return (
     <Box>
+      {/* Header với welcome message */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Box>
           <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -99,6 +101,7 @@ export const BuyerDashboard: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Grid thống kê chính */}
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
           <StatsCard
@@ -138,6 +141,7 @@ export const BuyerDashboard: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Section phụ với đơn hàng gần đây và quick actions */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
@@ -145,6 +149,7 @@ export const BuyerDashboard: React.FC = () => {
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Recent Orders
               </Typography>
+              {/* Hiển thị đơn hàng gần đây */}
               {recentOrders.length > 0 ? (
                 <Box sx={{ mt: 2 }}>
                   {recentOrders.map((order) => (
@@ -161,7 +166,7 @@ export const BuyerDashboard: React.FC = () => {
                     >
                       <Box>
                         <Typography variant="body2" fontWeight="medium">
-                          Order #{order.id.slice(-8)}
+                          Order #{order.id.slice(-8)} {/* Hiển thị 8 ký tự cuối của order ID */}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {new Date(order.createdAt).toLocaleDateString()}
@@ -195,6 +200,7 @@ export const BuyerDashboard: React.FC = () => {
                   </Box>
                 </Box>
               ) : (
+                // Hiển thị khi chưa có đơn hàng
                 <Box textAlign="center" py={4}>
                   <Typography color="text.secondary" gutterBottom>
                     No orders yet
