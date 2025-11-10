@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend API Connection</title>
+</head>
+<body>
+    <h1>Test API Connection</h1>
+    <button id="testBtn">Test Register</button>
+    <pre id="result"></pre>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Sending request...\n';
+
+            const testData = {
+                email: 'test_' + Date.now() + '@example.com',
+                password: 'Test123!@#',
+                role: 'ev_owner'
+            };
+
+            try {
+                resultEl.textContent += 'Request data: ' + JSON.stringify(testData, null, 2) + '\n\n';
+                resultEl.textContent += 'Sending to: http://localhost:8000/api/users/register\n\n';
+
+                const startTime = Date.now();
+                
+                const response = await fetch('http://localhost:8000/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const duration = Date.now() - startTime;
+
+                resultEl.textContent += `Response received in ${duration}ms\n\n`;
+                resultEl.textContent += 'Status: ' + response.status + '\n';
+                resultEl.textContent += 'Status Text: ' + response.statusText + '\n\n';
+
+                const data = await response.json();
+                resultEl.textContent += 'Response:\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultEl.textContent += 'ERROR: ' + error.message + '\n';
+                resultEl.textContent += 'Error details: ' + error.stack;
+            }
+        });
+    </script>
+</body>
+</html>
