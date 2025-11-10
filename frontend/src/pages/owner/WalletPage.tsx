@@ -7,9 +7,9 @@ import {
   Grid,
   Button,
   CircularProgress,
-  Divider,
+  Alert,
 } from '@mui/material';
-import { AccountBalanceWallet, TrendingUp, TrendingDown } from '@mui/icons-material';
+import { AccountBalanceWallet, TrendingUp, TrendingDown, Download } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { walletService } from '../../services/wallet.service';
 import { Wallet, Transaction } from '../../types';
@@ -19,24 +19,58 @@ export const WalletPage: React.FC = () => {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setError(null);
         const [walletData, transactionsData] = await Promise.all([
           walletService.getMyWallet(),
           walletService.getTransactions(),
         ]);
         setWallet(walletData);
         setTransactions(transactionsData);
-      } catch (error) {
-        console.error('Failed to fetch wallet data:', error);
+      } catch (err) {
+        console.error('Failed to fetch wallet data:', err);
+        setError('Failed to load wallet data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
     fetchData();
   }, []);
+
+  const handleExportCSV = () => {
+    if (transactions.length === 0) {
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['Date', 'Type', 'Description', 'Amount'];
+    const csvContent = [
+      headers.join(','),
+      ...transactions.map((tx) =>
+        [
+          format(new Date(tx.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+          tx.type,
+          `"${tx.description}"`,
+          tx.amount.toFixed(2),
+        ].join(',')
+      ),
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `wallet-transactions-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const columns: GridColDef[] = [
     {
@@ -83,6 +117,19 @@ export const WalletPage: React.FC = () => {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          My Wallet
+        </Typography>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
       </Box>
     );
   }
@@ -145,7 +192,14 @@ export const WalletPage: React.FC = () => {
           <Typography variant="h5" fontWeight="bold">
             Transaction History
           </Typography>
-          <Button variant="outlined">Export CSV</Button>
+          <Button
+            variant="outlined"
+            startIcon={<Download />}
+            onClick={handleExportCSV}
+            disabled={transactions.length === 0}
+          >
+            Export CSV
+          </Button>
         </Box>
 
         <Card>
