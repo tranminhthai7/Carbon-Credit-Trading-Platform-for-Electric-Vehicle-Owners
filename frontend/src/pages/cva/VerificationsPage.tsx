@@ -6,25 +6,23 @@ import {
   CardContent,
   Button,
   Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { CheckCircle, Cancel } from '@mui/icons-material';
+import { CheckCircle, Cancel, Info } from '@mui/icons-material';
 import { verificationService } from '../../services/verification.service';
 import { Verification } from '../../types';
 import { format } from 'date-fns';
+import { LoadingSpinner, EmptyState } from '../../components/common';
+import { VerificationDialog } from '../../components/dialogs/VerificationDialog';
 
 export const VerificationsPage: React.FC = () => {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
-  const [comments, setComments] = useState('');
   const [action, setAction] = useState<'approve' | 'reject' | null>(null);
+  const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
     fetchVerifications();
@@ -32,6 +30,7 @@ export const VerificationsPage: React.FC = () => {
 
   const fetchVerifications = async () => {
     try {
+      setLoading(true);
       const data = await verificationService.getPendingVerifications();
       setVerifications(data);
     } catch (error) {
@@ -41,22 +40,36 @@ export const VerificationsPage: React.FC = () => {
     }
   };
 
-  const handleAction = async () => {
+  const handleAction = async (comments: string) => {
     if (!selectedVerification || !action) return;
-    try {
-      if (action === 'approve') {
-        await verificationService.approveVerification(selectedVerification.id, comments);
-      } else {
-        await verificationService.rejectVerification(selectedVerification.id, comments);
-      }
-      setSelectedVerification(null);
-      setComments('');
-      setAction(null);
-      fetchVerifications();
-    } catch (error) {
-      console.error('Failed to process verification:', error);
+    
+    if (action === 'approve') {
+      await verificationService.approveVerification(selectedVerification.id, comments);
+    } else {
+      await verificationService.rejectVerification(selectedVerification.id, comments);
     }
+    
+    setSelectedVerification(null);
+    setAction(null);
+    fetchVerifications();
   };
+
+  const openDialog = (verification: Verification, actionType: 'approve' | 'reject') => {
+    setSelectedVerification(verification);
+    setAction(actionType);
+  };
+
+  const closeDialog = () => {
+    setSelectedVerification(null);
+    setAction(null);
+  };
+
+  const filteredVerifications = verifications.filter((v) => {
+    if (tabValue === 0) return v.status === 'PENDING';
+    if (tabValue === 1) return v.status === 'APPROVED';
+    if (tabValue === 2) return v.status === 'REJECTED';
+    return true;
+  });
 
   const columns: GridColDef[] = [
     {
@@ -98,10 +111,7 @@ export const VerificationsPage: React.FC = () => {
                 variant="contained"
                 color="success"
                 startIcon={<CheckCircle />}
-                onClick={() => {
-                  setSelectedVerification(params.row);
-                  setAction('approve');
-                }}
+                onClick={() => openDialog(params.row, 'approve')}
               >
                 Approve
               </Button>
@@ -110,27 +120,31 @@ export const VerificationsPage: React.FC = () => {
                 variant="outlined"
                 color="error"
                 startIcon={<Cancel />}
-                onClick={() => {
-                  setSelectedVerification(params.row);
-                  setAction('reject');
-                }}
+                onClick={() => openDialog(params.row, 'reject')}
               >
                 Reject
               </Button>
             </Box>
           );
         }
-        return null;
+        return (
+          <Button
+            size="small"
+            startIcon={<Info />}
+            onClick={() => {
+              setSelectedVerification(params.row);
+              setAction(null);
+            }}
+          >
+            View Details
+          </Button>
+        );
       },
     },
   ];
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner message="Loading verifications..." />;
   }
 
   return (
@@ -143,60 +157,55 @@ export const VerificationsPage: React.FC = () => {
       </Typography>
 
       <Card>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+            <Tab
+              label={`Pending (${verifications.filter((v) => v.status === 'PENDING').length})`}
+            />
+            <Tab
+              label={`Approved (${verifications.filter((v) => v.status === 'APPROVED').length})`}
+            />
+            <Tab
+              label={`Rejected (${verifications.filter((v) => v.status === 'REJECTED').length})`}
+            />
+          </Tabs>
+        </Box>
+
         <CardContent>
-          <DataGrid
-            rows={verifications}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-            }}
-            pageSizeOptions={[5, 10, 25]}
-            autoHeight
-            disableRowSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-cell:focus': {
-                outline: 'none',
-              },
-            }}
-          />
+          {filteredVerifications.length === 0 ? (
+            <EmptyState
+              title={`No ${tabValue === 0 ? 'pending' : tabValue === 1 ? 'approved' : 'rejected'} verifications`}
+              message="There are no verifications in this category at the moment."
+            />
+          ) : (
+            <DataGrid
+              rows={filteredVerifications}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              disableRowSelectionOnClick
+              autoHeight
+              sx={{
+                '& .MuiDataGrid-cell:focus': {
+                  outline: 'none',
+                },
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 
-      <Dialog
-        open={!!selectedVerification}
-        onClose={() => setSelectedVerification(null)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {action === 'approve' ? 'Approve' : 'Reject'} Verification
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Comments"
-            multiline
-            rows={4}
-            value={comments}
-            onChange={(e: any) => setComments(e.target.value)}
-            margin="normal"
-            required={action === 'reject'}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedVerification(null)}>Cancel</Button>
-          <Button
-            onClick={handleAction}
-            variant="contained"
-            color={action === 'approve' ? 'success' : 'error'}
-            disabled={action === 'reject' && !comments}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <VerificationDialog
+        open={action !== null}
+        verification={selectedVerification}
+        action={action}
+        onClose={closeDialog}
+        onConfirm={handleAction}
+      />
     </Box>
   );
 };

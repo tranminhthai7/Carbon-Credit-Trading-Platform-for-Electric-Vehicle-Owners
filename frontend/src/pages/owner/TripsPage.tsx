@@ -6,31 +6,59 @@ import {
   CardContent,
   Button,
   Chip,
-  CircularProgress,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Add } from '@mui/icons-material';
+import { Add, Download } from '@mui/icons-material';
 import { tripService } from '../../services/trip.service';
 import { Trip } from '../../types';
 import { format } from 'date-fns';
+import { TripFormDialog } from '../../components/forms/TripFormDialog';
+import { LoadingSpinner, EmptyState } from '../../components/common';
 
 export const TripsPage: React.FC = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openForm, setOpenForm] = useState(false);
 
   useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        const data = await tripService.getMyTrips();
-        setTrips(data);
-      } catch (error) {
-        console.error('Failed to fetch trips:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTrips();
   }, []);
+
+  const fetchTrips = async () => {
+    try {
+      setLoading(true);
+      const data = await tripService.getMyTrips();
+      setTrips(data);
+    } catch (error) {
+      console.error('Failed to fetch trips:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    // Export trips to CSV
+    const headers = ['Date', 'Distance (km)', 'Energy (kWh)', 'Carbon Saved (kg)', 'Status'];
+    const csvData = trips.map(trip => [
+      format(new Date(trip.startTime), 'yyyy-MM-dd'),
+      trip.distance,
+      trip.energyConsumed,
+      trip.carbonSaved?.toFixed(2) || '0',
+      trip.verificationStatus,
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `trips-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+  };
 
   const columns: GridColDef[] = [
     {
@@ -56,7 +84,7 @@ export const TripsPage: React.FC = () => {
       headerName: 'Carbon Saved (kg)',
       width: 150,
       type: 'number',
-      valueFormatter: (params) => params.value?.toFixed(2),
+      valueFormatter: (params) => params.value?.toFixed(2) || '0.00',
     },
     {
       field: 'verificationStatus',
@@ -75,18 +103,14 @@ export const TripsPage: React.FC = () => {
     },
     {
       field: 'createdAt',
-      headerName: 'Created',
+      headerName: 'Recorded At',
       width: 150,
       valueGetter: (params) => format(new Date(params.row.createdAt), 'MMM dd, HH:mm'),
     },
   ];
 
   if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
+    return <LoadingSpinner message="Loading trips..." />;
   }
 
   return (
@@ -100,33 +124,65 @@ export const TripsPage: React.FC = () => {
             View and manage your electric vehicle trips
           </Typography>
         </Box>
-        <Button variant="contained" startIcon={<Add />}>
-          Record New Trip
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            startIcon={<Download />}
+            onClick={handleExportCSV}
+            disabled={trips.length === 0}
+          >
+            Export CSV
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setOpenForm(true)}
+          >
+            Record New Trip
+          </Button>
+        </Box>
       </Box>
 
-      <Card>
-        <CardContent>
-          <DataGrid
-            rows={trips}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-            }}
-            pageSizeOptions={[5, 10, 25]}
-            checkboxSelection
-            disableRowSelectionOnClick
-            autoHeight
-            sx={{
-              '& .MuiDataGrid-cell:focus': {
-                outline: 'none',
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
+      {trips.length === 0 ? (
+        <EmptyState
+          title="No trips yet"
+          message="Start recording your EV trips to earn carbon credits!"
+          actionLabel="Record Your First Trip"
+          onAction={() => setOpenForm(true)}
+        />
+      ) : (
+        <Card>
+          <CardContent>
+            <DataGrid
+              rows={trips}
+              columns={columns}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              checkboxSelection
+              disableRowSelectionOnClick
+              autoHeight
+              sx={{
+                '& .MuiDataGrid-cell:focus': {
+                  outline: 'none',
+                },
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      <TripFormDialog
+        open={openForm}
+        onClose={() => setOpenForm(false)}
+        onSuccess={() => {
+          fetchTrips();
+          // Show success message (you can add Snackbar later)
+        }}
+      />
     </Box>
   );
 };
