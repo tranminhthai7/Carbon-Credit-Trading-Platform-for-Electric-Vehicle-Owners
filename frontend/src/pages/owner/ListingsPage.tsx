@@ -12,9 +12,12 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  IconButton,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Add, Cancel } from '@mui/icons-material';
+import { Add, Cancel, Edit } from '@mui/icons-material';
 import { marketplaceService } from '../../services/marketplace.service';
 import { Listing } from '../../types';
 import { format } from 'date-fns';
@@ -23,6 +26,14 @@ export const ListingsPage: React.FC = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error',
+  });
   const [formData, setFormData] = useState({
     quantity: '',
     pricePerUnit: '',
@@ -43,36 +54,78 @@ export const ListingsPage: React.FC = () => {
     }
   };
 
-  const handleCreateListing = async () => {
+  const handleOpenCreateDialog = () => {
+    setIsEditMode(false);
+    setFormData({ quantity: '', pricePerUnit: '' });
+    setOpenDialog(true);
+  };
+
+  const handleOpenEditDialog = (listing: Listing) => {
+    setIsEditMode(true);
+    setSelectedListing(listing);
+    setFormData({
+      quantity: listing.quantity.toString(),
+      pricePerUnit: listing.pricePerUnit.toString(),
+    });
+    setOpenDialog(true);
+  };
+
+  const handleSubmit = async () => {
     try {
-      await marketplaceService.createListing({
-        quantity: Number(formData.quantity),
-        pricePerUnit: Number(formData.pricePerUnit),
-        totalPrice: Number(formData.quantity) * Number(formData.pricePerUnit),
-      });
+      if (isEditMode && selectedListing) {
+        await marketplaceService.updateListing(selectedListing.id, {
+          pricePerUnit: Number(formData.pricePerUnit),
+        });
+        setSnackbar({ open: true, message: 'Listing updated successfully!', severity: 'success' });
+      } else {
+        await marketplaceService.createListing({
+          quantity: Number(formData.quantity),
+          pricePerUnit: Number(formData.pricePerUnit),
+          totalPrice: Number(formData.quantity) * Number(formData.pricePerUnit),
+        });
+        setSnackbar({ open: true, message: 'Listing created successfully!', severity: 'success' });
+      }
       setOpenDialog(false);
       setFormData({ quantity: '', pricePerUnit: '' });
+      setSelectedListing(null);
       fetchListings();
     } catch (error) {
-      console.error('Failed to create listing:', error);
+      console.error('Failed to save listing:', error);
+      setSnackbar({ open: true, message: 'Failed to save listing', severity: 'error' });
     }
   };
 
-  const handleCancelListing = async (listingId: string) => {
+  const handleOpenCancelDialog = (listing: Listing) => {
+    setSelectedListing(listing);
+    setOpenConfirmDialog(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!selectedListing) return;
     try {
-      await marketplaceService.cancelListing(listingId);
+      await marketplaceService.cancelListing(selectedListing.id);
+      setSnackbar({ open: true, message: 'Listing cancelled successfully!', severity: 'success' });
+      setOpenConfirmDialog(false);
+      setSelectedListing(null);
       fetchListings();
     } catch (error) {
       console.error('Failed to cancel listing:', error);
+      setSnackbar({ open: true, message: 'Failed to cancel listing', severity: 'error' });
     }
   };
 
   const columns: GridColDef[] = [
     {
+      field: 'id',
+      headerName: 'ID',
+      width: 100,
+    },
+    {
       field: 'quantity',
       headerName: 'Quantity',
       width: 120,
       type: 'number',
+      valueFormatter: (params) => `${params.value} kg`,
     },
     {
       field: 'pricePerUnit',
@@ -89,7 +142,7 @@ export const ListingsPage: React.FC = () => {
     {
       field: 'status',
       headerName: 'Status',
-      width: 120,
+      width: 130,
       renderCell: (params) => {
         const status = params.value as string;
         const color =
@@ -97,32 +150,37 @@ export const ListingsPage: React.FC = () => {
             ? 'success'
             : status === 'SOLD'
             ? 'info'
+            : status === 'CANCELLED'
+            ? 'error'
             : 'default';
         return <Chip label={status} color={color} size="small" />;
       },
     },
     {
-      field: 'createdAt',
-      headerName: 'Created',
-      width: 180,
-      valueGetter: (params) => format(new Date(params.row.createdAt), 'MMM dd, yyyy HH:mm'),
-    },
-    {
       field: 'actions',
       headerName: 'Actions',
-      width: 130,
+      width: 150,
       renderCell: (params) => {
         if (params.row.status === 'ACTIVE') {
           return (
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              startIcon={<Cancel />}
-              onClick={() => handleCancelListing(params.row.id)}
-            >
-              Cancel
-            </Button>
+            <Box display="flex" gap={1}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => handleOpenEditDialog(params.row)}
+                title="Edit Price"
+              >
+                <Edit fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => handleOpenCancelDialog(params.row)}
+                title="Cancel Listing"
+              >
+                <Cancel fontSize="small" />
+              </IconButton>
+            </Box>
           );
         }
         return null;
@@ -149,12 +207,8 @@ export const ListingsPage: React.FC = () => {
             Manage your carbon credit listings
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setOpenDialog(true)}
-        >
-          Create Listing
+        <Button variant="contained" startIcon={<Add />} onClick={handleOpenCreateDialog}>
+          Create New Listing
         </Button>
       </Box>
 
@@ -180,8 +234,9 @@ export const ListingsPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Create/Edit Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New Listing</DialogTitle>
+        <DialogTitle>{isEditMode ? 'Edit Listing Price' : 'Create New Listing'}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -190,6 +245,14 @@ export const ListingsPage: React.FC = () => {
             value={formData.quantity}
             onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
             margin="normal"
+            disabled={isEditMode}
+            inputProps={{ min: 1 }}
+            error={formData.quantity !== '' && Number(formData.quantity) <= 0}
+            helperText={
+              formData.quantity !== '' && Number(formData.quantity) <= 0
+                ? 'Quantity must be greater than 0'
+                : ''
+            }
           />
           <TextField
             fullWidth
@@ -198,9 +261,16 @@ export const ListingsPage: React.FC = () => {
             value={formData.pricePerUnit}
             onChange={(e) => setFormData({ ...formData, pricePerUnit: e.target.value })}
             margin="normal"
+            inputProps={{ min: 0.01, step: 0.01 }}
+            error={formData.pricePerUnit !== '' && Number(formData.pricePerUnit) <= 0}
+            helperText={
+              formData.pricePerUnit !== '' && Number(formData.pricePerUnit) <= 0
+                ? 'Price must be greater than 0'
+                : ''
+            }
           />
           {formData.quantity && formData.pricePerUnit && (
-            <Typography variant="h6" sx={{ mt: 2 }}>
+            <Typography variant="h6" sx={{ mt: 2 }} color="primary">
               Total: ${(Number(formData.quantity) * Number(formData.pricePerUnit)).toFixed(2)}
             </Typography>
           )}
@@ -208,14 +278,62 @@ export const ListingsPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button
-            onClick={handleCreateListing}
+            onClick={handleSubmit}
             variant="contained"
-            disabled={!formData.quantity || !formData.pricePerUnit}
+            disabled={
+              !formData.quantity ||
+              !formData.pricePerUnit ||
+              Number(formData.quantity) <= 0 ||
+              Number(formData.pricePerUnit) <= 0
+            }
           >
-            Create
+            {isEditMode ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Confirm Cancel Dialog */}
+      <Dialog open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
+        <DialogTitle>Confirm Cancellation</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to cancel this listing?</Typography>
+          {selectedListing && (
+            <Box mt={2}>
+              <Typography variant="body2" color="text.secondary">
+                Quantity: {selectedListing.quantity} kg
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Price: ${selectedListing.pricePerUnit.toFixed(2)}/unit
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total: ${selectedListing.totalPrice.toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenConfirmDialog(false)}>No, Keep It</Button>
+          <Button onClick={handleConfirmCancel} variant="contained" color="error">
+            Yes, Cancel Listing
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
