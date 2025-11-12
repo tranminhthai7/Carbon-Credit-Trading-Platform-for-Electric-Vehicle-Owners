@@ -53,6 +53,7 @@ desktop.ini
 *.md
 !LICENSE.md
 !CHANGELOG.md
+!docs/*.md
 
 # Auto-generated files
 setup-github.ps1
