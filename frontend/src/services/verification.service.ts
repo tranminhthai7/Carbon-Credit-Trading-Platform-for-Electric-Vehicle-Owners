@@ -35,4 +35,10 @@ export const verificationService = {
     const response = await apiClient.get('/api/verifications/stats');
     return response.data;
   },
+
+  // Get recent verification activities
+  getRecentActivities: async (): Promise<Verification[]> => {
+    const response = await apiClient.get<Verification[]>('/api/verifications/recent');
+    return response.data;
+  },
 };
