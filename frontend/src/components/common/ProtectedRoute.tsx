@@ -1,8 +1,8 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
-import { CircularProgress, Box } from '@mui/material';
+import { CircularProgress, Box, Typography } from '@mui/material';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,21 +11,42 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { user, loading, isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  const isRoleAllowed = React.useMemo(() => {
+    if (!allowedRoles || !user) {
+      return true;
+    }
+
+    return allowedRoles.includes(user.role);
+  }, [allowedRoles, user]);
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
+      <Box
+        role="status"
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        flexDirection="column"
+        gap={2}
+        aria-live="polite"
+      >
+        <CircularProgress aria-hidden />
+        <Typography component="span" variant="body2">
+          Loading your dashboard&hellip;
+        </Typography>
       </Box>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (!isRoleAllowed) {
+    return <Navigate to="/unauthorized" replace state={{ from: location }} />;
   }
 
   return <>{children}</>;
