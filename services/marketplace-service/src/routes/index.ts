@@ -1,23 +1,40 @@
-//routes\index.ts
 import { Router } from "express";
 import { createListingHandler, getAllListingsHandler, buyListingHandler } from "../controllers/listingController";
 import { getAllOrdersHandler, updateOrderStatusHandler } from "../controllers/orderController";
 import { placeBidHandler, getBidsHandler, closeAuctionHandler } from "../controllers/bidController";
+import { AppDataSource } from "../data-source";
+import { Order } from "../entities/Order";
 
 const router = Router();
 
 // Listing routes
-router.post("/listings", createListingHandler);//Tạo mới một listing (đăng bán tín chỉ carbon)
-router.get("/listings", getAllListingsHandler);//Lấy danh sách tất cả các listing hiện có (chưa bán hoặc đã bán)
-router.post("/listings/:id/purchase", buyListingHandler);//Người mua mua trực tiếp listing (giá cố định, không đấu giá)
+router.post("/listings", createListingHandler);
+router.get("/listings", getAllListingsHandler);
+router.post("/listings/:id/purchase", buyListingHandler);
 
 // Auction routes
-router.post("/listings/:id/bid", placeBidHandler); //Người mua đặt giá (bid) cho listing đấu giá
-router.get("/listings/:id/bids", getBidsHandler); //Xem tất cả các bid hiện có cho listing đó
-router.post("/listings/:id/close", closeAuctionHandler);//Kết thúc phiên đấu giá
+router.post("/listings/:id/bid", placeBidHandler);
+router.get("/listings/:id/bids", getBidsHandler);
+router.post("/listings/:id/close", closeAuctionHandler);
 
 // Orders
-router.get("/orders", getAllOrdersHandler);//Xem toàn bộ đơn hàng
-router.post("/orders/update", updateOrderStatusHandler);//Cập nhật trạng thái đơn hàng
+router.get("/orders", getAllOrdersHandler);
+router.post("/orders/update", updateOrderStatusHandler);
+
+// lấy danh sách đơn hàng theo buyerId, đồng thời join với entity listing và sắp xếp theo createdAt
+router.get("/orders/buyer/:buyerId", async (req, res) => {
+  try {
+    const orderRepo = AppDataSource.getRepository(Order);
+    const orders = await orderRepo.find({
+      where: { buyerId: req.params.buyerId },
+      relations: ["listing"],
+      order: { createdAt: "DESC" }
+    });
+    res.json(orders);
+  } catch (err: any) {
+    console.error("Error fetching buyer orders:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;
