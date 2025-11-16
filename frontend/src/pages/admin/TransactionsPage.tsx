@@ -1,33 +1,20 @@
-import React from 'react';
-import { Box, Typography, Card, CardContent, Chip } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Card, CardContent, Chip, CircularProgress, Button } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import adminService from '../../services/admin.service';
+import { format } from 'date-fns';
 
 export const TransactionsPage: React.FC = () => {
-  // Mock data - replace with actual API
-  const transactions = [
-    {
-      id: '1',
-      userId: 'user123',
-      type: 'EARN',
-      amount: 50.0,
-      description: 'Carbon credit earned from trip',
-      createdAt: '2024-03-01 10:30',
-    },
-    {
-      id: '2',
-      userId: 'user456',
-      type: 'SPEND',
-      amount: 75.0,
-      description: 'Carbon credit purchase',
-      createdAt: '2024-03-02 14:15',
-    },
-  ];
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const columns: GridColDef[] = [
     {
       field: 'createdAt',
       headerName: 'Date',
       width: 180,
+      valueGetter: (params: any) => format(new Date(params.row.createdAt), 'MMM dd, yyyy HH:mm'),
     },
     {
       field: 'userId',
@@ -56,6 +43,18 @@ export const TransactionsPage: React.FC = () => {
     },
   ];
 
+  useEffect(() => { fetchTransactions(); }, []);
+
+  async function fetchTransactions() {
+    setLoading(true); setError('');
+    try {
+      const data = await adminService.getTransactions();
+      setTransactions(data);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load transactions');
+    } finally { setLoading(false); }
+  }
+
   return (
     <Box>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
@@ -67,6 +66,11 @@ export const TransactionsPage: React.FC = () => {
 
       <Card>
         <CardContent>
+          {loading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px"><CircularProgress /></Box>
+          ) : error ? (
+            <Box textAlign="center"><Typography color="error">{error}</Typography><Button variant="contained" onClick={fetchTransactions}>Retry</Button></Box>
+          ) : (
           <DataGrid
             rows={transactions}
             columns={columns}
@@ -83,7 +87,7 @@ export const TransactionsPage: React.FC = () => {
                 outline: 'none',
               },
             }}
-          />
+          />)}
         </CardContent>
       </Card>
     </Box>

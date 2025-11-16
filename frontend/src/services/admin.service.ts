@@ -23,6 +23,16 @@ export const adminService = {
   unbanUser: async (userId: string): Promise<void> => {
     await apiClient.post(`/api/admin/users/${userId}/unban`);
   },
+  // Get transactions
+  getTransactions: async (): Promise<any[]> => {
+    const response = await apiClient.get<any[]>('/api/admin/transactions');
+    return response.data;
+  },
+  // Get transaction by id
+  getTransactionById: async (id: string): Promise<any> => {
+    const response = await apiClient.get<any>(`/api/admin/transactions/${id}`);
+    return response.data;
+  },
 };
 
 export default adminService;
