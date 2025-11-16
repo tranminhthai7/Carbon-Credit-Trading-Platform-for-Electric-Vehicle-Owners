@@ -64,6 +64,8 @@ export const CVADashboard: React.FC = () => {
       </Box>
     );
   }
+
+  return (
     <Box>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         CVA Dashboard
