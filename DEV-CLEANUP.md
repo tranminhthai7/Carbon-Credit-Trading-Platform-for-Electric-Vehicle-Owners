@@ -1,8 +1,8 @@
 # Dev Cleanup Summary
 
-This file documents the archiving/cleanup steps performed to tidy up the repository's dev/test artifacts. These artifacts were backed up into `dev-tools-archived-backup.zip` and the `dev-tools` folder was permanently removed from the repository.
+This file documents the archiving/cleanup steps performed to tidy up the repository's dev/test artifacts. The `dev-tools` folder was permanently removed from the repository and no backup file remains in the repository. If you need to restore files, they can be recovered from Git history or any local backups.
 
-Files archived into `dev-tools-archived-backup.zip` (previously in `dev-tools`):
+Files that were previously archived as a zip (now permanently deleted):
 - `temp/*` (test scripts)
 - `dev-tools/mock-auth/*`
 - `services/mq-producer/*`
