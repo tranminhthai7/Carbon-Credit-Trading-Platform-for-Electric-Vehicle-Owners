@@ -28,6 +28,12 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    // Also call server to clear refresh cookie
+    try {
+      apiClient.post('/api/users/logout');
+    } catch (err) {
+      // ignore
+    }
   },
 
   getCurrentUser: (): User | null => {
@@ -49,6 +55,18 @@ export const authService = {
     localStorage.setItem('user', JSON.stringify(response.data));
     return response.data;
   },
+
+  refresh: async (): Promise<AuthResponse> => {
+    // Server will read cookie and return a new access token
+    const response = await apiClient.post('/api/users/refresh', {});
+    const authData = response.data.data;
+    if (authData.token) {
+      localStorage.setItem('token', authData.token);
+      localStorage.setItem('user', JSON.stringify(authData.user));
+    }
+    return authData;
+  },
+
 
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {
     const response = await apiClient.put<User>(`/api/users/${userId}`, data);

@@ -9,6 +9,7 @@ export const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // send cookies, used for refresh token cookie
 });
 
 // Request interceptor to add auth token
@@ -28,10 +29,33 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Try to refresh access token using cookie
+      const refreshUrl = `${API_BASE_URL}/api/users/refresh`;
+      return axios.post(
+        refreshUrl,
+        {},
+        { withCredentials: true }
+      ).then((resp) => {
+        const token = (resp.data?.data?.token);
+        const user = (resp.data?.data?.user);
+        if (token) {
+          localStorage.setItem('token', token);
+          if (user) localStorage.setItem('user', JSON.stringify(user));
+        }
+        // Retry original request with new token
+        const config = error.config as any;
+        config.headers = config.headers || {};
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return axios(config);
+      }).catch((_) => {
+        // Refresh failed - clear storage and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      });
     }
     return Promise.reject(error);
   }

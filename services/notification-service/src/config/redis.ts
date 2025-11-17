@@ -1,8 +1,9 @@
 import { Redis } from "ioredis";
 
 export const redis = new Redis({
-  host: "127.0.0.1",
-  port: 6379
+  host: process.env.REDIS_HOST || 'redis',
+  port: Number(process.env.REDIS_PORT || 6379),
+  password: process.env.REDIS_PASSWORD || undefined,
 });
 
 redis.on("connect", () => console.log("🔌 Connected to Redis"));

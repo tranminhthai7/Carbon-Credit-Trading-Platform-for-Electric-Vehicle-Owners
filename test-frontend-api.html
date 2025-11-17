@@ -1,23 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Test Frontend API Connection</title>
+    <title>ARCHIVED — Test Frontend API Connection</title>
 </head>
 <body>
-    <h1>Test API Connection</h1>
-    <button id="testBtn">Test Register</button>
+    <h1>ARCHIVED — Test API Connection</h1>
+    <p>This page has been archived and moved to <code>dev-tools/archived/temp/test-frontend-api.html</code>.</p>
     <pre id="result"></pre>
-
-    <script>
-        document.getElementById('testBtn').addEventListener('click', async () => {
-            const resultEl = document.getElementById('result');
-            resultEl.textContent = 'Sending request...\n';
-
-            const testData = {
-                email: 'test_' + Date.now() + '@example.com',
-                password: 'Test123!@#',
-                role: 'ev_owner'
-            };
 
             try {
                 resultEl.textContent += 'Request data: ' + JSON.stringify(testData, null, 2) + '\n\n';

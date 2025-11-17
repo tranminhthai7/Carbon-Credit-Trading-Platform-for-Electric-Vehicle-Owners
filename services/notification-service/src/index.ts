@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import notificationRoutes from './routes/notification.routes';
 import emailRoutes from "./routes/email.routes";
+import { startMQConsumer } from './workers/mq.consumer';
 
 // Nạp biến môi trường từ file .env (nếu có)
 dotenv.config();
@@ -27,4 +28,6 @@ app.get('/', (req: Request, res: Response) => {
 // Bắt đầu chạy server
 app.listen(PORT, () => {
   console.log(`✅ Notification Service is running on port ${PORT}`);
+  // Start rabbitmq consumer
+  startMQConsumer().catch(err => console.error('Failed to start MQ consumer', err));
 });

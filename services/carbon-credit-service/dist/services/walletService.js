@@ -1,0 +1,68 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createWallet = createWallet;
+exports.getWalletByUserId = getWalletByUserId;
+exports.mintCredits = mintCredits;
+exports.transferCredits = transferCredits;
+//walletService.ts
+const data_source_1 = require("../data-source");
+const Wallet_1 = require("../entities/Wallet");
+const Transaction_1 = require("../entities/Transaction");
+const walletRepo = () => data_source_1.AppDataSource.getRepository(Wallet_1.Wallet);
+const txRepo = () => data_source_1.AppDataSource.getRepository(Transaction_1.Transaction);
+async function createWallet(userId) {
+    const repo = walletRepo();
+    let existing = await repo.findOneBy({ userId });
+    if (existing)
+        return existing;
+    const wallet = repo.create({ userId, balance: 0 });
+    return repo.save(wallet);
+}
+async function getWalletByUserId(userId) {
+    const repo = walletRepo();
+    return repo.findOneBy({ userId });
+}
+async function mintCredits(userId, amount) {
+    const repo = walletRepo();
+    const txRepository = txRepo();
+    const wallet = await repo.findOneBy({ userId });
+    if (!wallet)
+        throw new Error('Wallet not found');
+    wallet.balance = Number(wallet.balance) + Number(amount);
+    await repo.save(wallet);
+    const tx = txRepository.create({
+        fromWallet: null,
+        toWallet: wallet,
+        amount,
+        type: 'MINT',
+    });
+    await txRepository.save(tx);
+    return { wallet, tx };
+}
+async function transferCredits(fromUserId, toUserId, amount) {
+    const repo = walletRepo();
+    const txRepository = txRepo();
+    if (amount <= 0)
+        throw new Error('Amount must be > 0');
+    const from = await repo.findOneBy({ userId: fromUserId });
+    const to = await repo.findOneBy({ userId: toUserId });
+    if (!from)
+        throw new Error('Sender wallet not found');
+    if (!to)
+        throw new Error('Recipient wallet not found');
+    if (from.balance < amount)
+        throw new Error('Insufficient balance');
+    // transaction: update balances
+    from.balance = Number(from.balance) - Number(amount);
+    to.balance = Number(to.balance) + Number(amount);
+    await repo.save(from);
+    await repo.save(to);
+    const tx = txRepository.create({
+        fromWallet: from,
+        toWallet: to,
+        amount,
+        type: 'TRANSFER',
+    });
+    await txRepository.save(tx);
+    return { from, to, tx };
+}

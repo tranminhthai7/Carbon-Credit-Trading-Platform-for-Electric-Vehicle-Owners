@@ -34,6 +34,7 @@ const createTables = async (client: any): Promise<void> => {
       password_hash VARCHAR(255) NOT NULL,
       role VARCHAR(50) NOT NULL CHECK (role IN ('ev_owner', 'buyer', 'cva', 'admin')),
       full_name VARCHAR(255),
+      email_verified BOOLEAN DEFAULT FALSE,
       phone VARCHAR(50),
       kyc_verified BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW(),
@@ -46,6 +47,34 @@ const createTables = async (client: any): Promise<void> => {
   
   await client.query(createUsersTable);
   console.log('✅ Users table created/verified');
+
+  // Add email_verified column if missing (migration) - using Postgres 'IF NOT EXISTS'
+  const addEmailVerifiedColumn = `
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+  `;
+  await client.query(addEmailVerifiedColumn);
+  console.log('✅ email_verified column ensured');
+
+  const createVerificationTable = `
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(128) NOT NULL UNIQUE,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      token_hash VARCHAR(255) NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `;
+
+  await client.query(createVerificationTable);
+  console.log('✅ email_verifications & refresh_tokens tables created/verified');
 };
 
 export const query = (text: string, params?: any[]) => {
