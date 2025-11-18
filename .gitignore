@@ -1,3 +1,5 @@
+# Local helper scripts
+scripts/*.ps1
 # Dependencies
 node_modules/
 bower_components/
