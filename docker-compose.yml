@@ -207,7 +207,7 @@ services:
     image: user-service-prod:latest
     container_name: user-service
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-development}
       PORT: 3001
       DB_HOST: user-db
       DB_PORT: 5432
@@ -262,7 +262,7 @@ services:
     volumes:
       - ./services/ev-data-service:/app
       - /app/node_modules
-    command: npm run dev
+    command: sh -c "npm install --no-audit --prefer-offline && npm run dev"
     restart: unless-stopped
 
   # Carbon Credit Service
@@ -521,8 +521,9 @@ services:
     container_name: api-gateway
     environment:
       PORT: 8000
-      NODE_ENV: production
-      CORS_ORIGIN: http://localhost:5173
+      NODE_ENV: ${NODE_ENV:-development}
+      # Accept common local dev ports for Vite so CORS doesn't block when Vite auto-falls back to other ports
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       USER_SERVICE_URL: http://user-service:3001
       EV_DATA_SERVICE_URL: http://ev-data-service:3002
       CARBON_CREDIT_SERVICE_URL: http://carbon-credit-service:3003
@@ -532,6 +533,7 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:3007
       REPORTING_SERVICE_URL: http://reporting-service:3008
       AI_SERVICE_URL: http://ai-service:3009
+      DEBUG_PROXY: 'true'
     ports:
       - "8000:8000"
     depends_on:
@@ -552,7 +554,7 @@ services:
     image: carbon-frontend:latest
     container_name: frontend
     environment:
-      VITE_API_URL: http://localhost:8000
+      VITE_API_BASE_URL: http://localhost:8000
     ports:
       - "5173:80"
     depends_on:
