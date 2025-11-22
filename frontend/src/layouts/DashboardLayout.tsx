@@ -16,6 +16,7 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
+import SafeAvatar from '../components/common/SafeAvatar';
 import {
   Menu as MenuIcon,
   Dashboard,
@@ -32,7 +33,9 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import getDashboardPathForRole from '../utils/navigation';
 import { UserRole } from '../types';
+import { safeInitial, safeReplace } from '../utils/stringHelpers';
 
 const drawerWidth = 240;
 
@@ -48,12 +51,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    title: 'Dashboard',
-    path: '/dashboard',
-    icon: <Dashboard />,
-    roles: [UserRole.EV_OWNER, UserRole.BUYER, UserRole.VERIFIER, UserRole.ADMIN],
-  },
   // EV Owner routes
   {
     title: 'My Trips',
@@ -155,6 +152,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     navigate('/login');
   };
 
+  // Compute dynamic dashboard path for user's role
+  const dashboardPath = user ? getDashboardPathForRole(user.role) : '/login';
+
   // Filter nav items based on user role
   const filteredNavItems = user
     ? navItems.filter((item) => item.roles.includes(user.role))
@@ -169,6 +169,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       </Toolbar>
       <Divider />
       <List>
+        {/* Dashboard link (dynamic) */}
+        {user && (
+          <ListItem key="dashboard" disablePadding>
+            <ListItemButton onClick={() => navigate(dashboardPath)}>
+              <ListItemIcon><Dashboard /></ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItemButton>
+          </ListItem>
+        )}
         {filteredNavItems.map((item) => (
           <ListItem key={item.path} disablePadding>
             <ListItemButton onClick={() => navigate(item.path)}>
@@ -201,14 +210,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {user?.role.replace('_', ' ')} Dashboard
+            {safeReplace(user?.role, '_', ' ')} Dashboard
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">{user?.name}</Typography>
+            <Typography variant="body2">{user?.full_name || user?.name}</Typography>
             <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
-              <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                {user?.name.charAt(0).toUpperCase()}
-              </Avatar>
+              <SafeAvatar name={user?.full_name || user?.name} />
             </IconButton>
             <Menu
               anchorEl={anchorEl}

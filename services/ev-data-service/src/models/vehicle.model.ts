@@ -15,6 +15,8 @@ export interface IVehicle {
   trips: ITrip[];
   total_distance_km: number;
   total_co2_saved_kg: number;
+    import_keys?: { key: string; added_at: Date }[];
+    credit_request_keys?: { key: string; added_at: Date }[];
 }
 
 // Mongoose Schema
@@ -86,6 +88,26 @@ const vehicleSchema = new Schema<IVehicle>(
       type: Number,
       default: 0,
       min: [0, 'Total CO2 saved cannot be negative'],
+    },
+    import_keys: {
+      type: [
+        {
+          key: String,
+          added_at: Date,
+        }
+      ],
+      default: [],
+      index: true,
+    },
+    credit_request_keys: {
+      type: [
+        {
+          key: String,
+          added_at: Date,
+        }
+      ],
+      default: [],
+      index: true,
     },
   },
   {

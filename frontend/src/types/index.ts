@@ -10,6 +10,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  full_name?: string;
   role: UserRole;
   phoneNumber?: string;
   createdAt: string;
@@ -143,6 +144,8 @@ export interface Certificate {
   certificateNumber: string;
   issueDate: string;
   pdfUrl: string;
+  amount?: number;
+  status?: string;
 }
 
 // Analytics types

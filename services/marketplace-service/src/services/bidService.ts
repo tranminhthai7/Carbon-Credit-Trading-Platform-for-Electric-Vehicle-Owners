@@ -26,7 +26,6 @@ export async function getBidsForListing(listingId: string) {
 }
 
 export async function closeAuction(listingId: string) {
-  const repo = bidRepo();
   const listing = await listingRepo().findOne({ where: { id: listingId }, relations: ["bids"] });
   if (!listing) throw new Error("Listing not found");
   if (listing.bids.length === 0) throw new Error("No bids placed");

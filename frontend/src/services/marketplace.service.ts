@@ -38,10 +38,9 @@ export const marketplaceService = {
   },
 
   // Purchase a listing (create order)
-  purchaseListing: async (listingId: string, quantity: number): Promise<Order> => {
-    const response = await apiClient.post<Order>('/api/listings/purchase', {
-      listingId,
-      quantity,
+  purchaseListing: async (listingId: string, buyerId: string): Promise<Order> => {
+    const response = await apiClient.post<Order>(`/api/listings/${listingId}/purchase`, {
+      buyerId,
     });
     return response.data;
   },

@@ -10,14 +10,33 @@ export async function createListingHandler(req: Request, res: Response) {
     }
     const listing = await listingService.createListing(userId, amount, pricePerCredit);
     res.json(listing);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
   }
 }
 
 export async function getAllListingsHandler(req: Request, res: Response) {
-  const listings = await listingService.getAllListings();
-  res.json(listings);
+  try {
+    const listings = await listingService.getAllListings();
+    res.json(listings);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function getListingByIdHandler(req: Request, res: Response) {
+  try {
+    const listingId = req.params.id;
+    if (!listingId) return res.status(400).json({ error: "Listing id required" });
+    const listing = await listingService.getListingById(listingId);
+    if (!listing) return res.status(404).json({ error: "Listing not found" });
+    res.json(listing);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
+  }
 }
 
 export async function buyListingHandler(req: Request, res: Response) {
@@ -31,8 +50,9 @@ export async function buyListingHandler(req: Request, res: Response) {
 
     const result = await listingService.buyListing(listingId, buyerId);
     res.json(result);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
   }
 }
 

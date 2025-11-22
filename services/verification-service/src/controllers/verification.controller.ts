@@ -452,6 +452,82 @@ export class VerificationController {
         }
     };
 
+    // Get certificates for current authenticated user
+    getCertificatesForCurrentUser = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const userId = (req as any).user?.id;
+            if (!userId) {
+                res.status(401).json({ success: false, message: 'Not authenticated' });
+                return;
+            }
+            const certificates = await this.certificateRepository.find({ where: { user_id: userId }, order: { issued_at: 'DESC' } });
+            res.json({ success: true, data: { certificates, total: certificates.length } });
+        } catch (error) {
+            console.error('Get certificates for current user error:', error);
+            res.status(500).json({ success: false, message: 'Failed to get certificates' });
+        }
+    };
+
+    // Download certificate PDF
+    downloadCertificatePdf = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const cert = await this.certificateRepository.findOne({ where: { id } });
+            if (!cert) {
+                res.status(404).json({ success: false, message: 'Certificate not found' });
+                return;
+            }
+            const userId = (req as any).user?.id;
+            // Ensure user owns the certificate
+            if (cert.user_id !== userId) {
+                res.status(403).json({ success: false, message: 'Forbidden' });
+                return;
+            }
+
+            // If certificate_url exists, redirect
+            if (cert.certificate_url) {
+                // For demo, redirect to certificate_url
+                res.redirect(cert.certificate_url);
+                return;
+            }
+
+            // Otherwise return a placeholder PDF
+            const buffer = Buffer.from('%PDF-1.4\n%Placeholder PDF for certificate\n', 'utf-8');
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="certificate-${id}.pdf"`);
+            res.status(200).send(buffer);
+        } catch (error) {
+            console.error('Download certificate error:', error);
+            res.status(500).json({ success: false, message: 'Failed to download certificate' });
+        }
+    };
+
+    // Create share link for certificate (no persistence for demo)
+    createCertificateShareLink = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const cert = await this.certificateRepository.findOne({ where: { id } });
+            if (!cert) {
+                res.status(404).json({ success: false, message: 'Certificate not found' });
+                return;
+            }
+            const userId = (req as any).user?.id;
+            if (cert.user_id !== userId) {
+                res.status(403).json({ success: false, message: 'Forbidden' });
+                return;
+            }
+
+            const shareToken = uuidv4();
+            // For demo, construct a share URL that points to the frontend /public page
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const shareUrl = `${frontendUrl}/public/certificates/${id}?token=${shareToken}`;
+            res.status(201).json({ success: true, data: { shareUrl } });
+        } catch (error) {
+            console.error('Create share link error:', error);
+            res.status(500).json({ success: false, message: 'Failed to create share link' });
+        }
+    };
+
     // Generate verification report
     generateVerificationReport = async (req: Request, res: Response): Promise<void> => {
         try {

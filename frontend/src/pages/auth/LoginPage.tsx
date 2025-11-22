@@ -15,6 +15,7 @@ import { Visibility, VisibilityOff, Nature } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { handleApiError } from '../../services/api';
+import { getDashboardPathForRole } from '../../utils/navigation';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -31,8 +32,9 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const auth = await login(email, password);
+      const destination = getDashboardPathForRole(auth.user.role);
+      navigate(destination);
     } catch (err) {
       setError(handleApiError(err));
     } finally {

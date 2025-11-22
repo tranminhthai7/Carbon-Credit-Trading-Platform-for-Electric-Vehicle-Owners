@@ -8,6 +8,9 @@
     "esModuleInterop": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node", "jest"]
   }
+  ,
+  "exclude": ["src/integration", "**/*.test.ts", "**/*.spec.ts"]
 }

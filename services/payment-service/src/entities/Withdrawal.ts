@@ -53,6 +53,9 @@ export class Withdrawal {
     account_holder_name?: string;
     bank_name?: string;
     paypal_email?: string;
+    // Stripe Connect fields (optional)
+    stripe_account_id?: string;
+    stripe_account?: string;
   };
 
   @Column({ nullable: true })
