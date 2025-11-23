@@ -36,14 +36,16 @@ export const authMiddleware = (
 
     // Verify token
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-    const decoded = jwt.verify(token, jwtSecret) as {
-      id: string;
-      email: string;
-      role: string;
-    };
+    const decoded = jwt.verify(token, jwtSecret) as any;
 
-    // Attach user info to request
-    req.user = decoded;
+    // Support tokens that use either `id` or `userId` in payload
+    const userId = decoded?.userId || decoded?.id;
+
+    req.user = {
+      id: userId,
+      email: decoded?.email,
+      role: decoded?.role,
+    };
 
     next();
   } catch (error) {
