@@ -10,8 +10,9 @@ export async function placeBidHandler(req: Request, res: Response) {
 
     const bid = await bidService.placeBid(listingId, bidderId, amount);
     res.json(bid);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
   }
 }
 
@@ -26,7 +27,8 @@ export async function closeAuctionHandler(req: Request, res: Response) {
     const listingId = req.params.id;
     const result = await bidService.closeAuction(listingId);
     res.json(result);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
   }
 }

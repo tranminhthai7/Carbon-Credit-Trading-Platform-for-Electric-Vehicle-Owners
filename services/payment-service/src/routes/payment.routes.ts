@@ -22,6 +22,9 @@ router.post('/escrow/release', paymentController.releaseEscrow);
 // Withdrawal APIs (Rút tiền)
 router.post('/withdrawal/create', validateWithdrawalCreate, paymentController.createWithdrawal);
 router.post('/withdrawal/process', paymentController.processWithdrawal);
+// Stripe Connect onboarding & account links (dev/mock mode also supported)
+router.post('/stripe/create-account', paymentController.createConnectedAccount);
+router.post('/stripe/create-account-link', paymentController.createAccountLink);
 
 // Cash Flow Management (Quản lý dòng tiền)
 router.get('/:user_id/dashboard', paymentController.getCashFlowDashboard);

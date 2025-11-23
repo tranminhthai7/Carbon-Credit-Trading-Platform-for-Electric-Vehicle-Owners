@@ -13,8 +13,20 @@ const PORT = process.env.PORT || 8000;
 // Middleware
 app.use(helmet()); // Security headers
 app.use(morgan('dev')); // Logging
+const parseAllowedOrigins = (raw?: string): string[] => (raw || 'http://localhost:5173').split(',').map(s => s.trim()).filter(Boolean);
+const allowedOrigins = parseAllowedOrigins(process.env.CORS_ORIGIN);
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // If no origin (e.g., server-to-server requests, CLI calls), allow it
+    if (!origin) return callback(null, true);
+    // Allow wildcard
+    if (allowedOrigins.includes('*')) return callback(null, true);
+    // Allow if origin is in configured list
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn(`Blocked CORS origin: ${origin}. Allowed: ${allowedOrigins.join(', ')}`);
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true
 }));
 // NOTE: DO NOT use express.json() - proxy needs to forward raw body stream
@@ -33,7 +45,22 @@ const services = {
 };
 
 // Proxy options factory
-const createProxyOptions = (target: string, servicePath: string): Options => ({
+interface ProxyOptionsExt extends Options {
+  stripServicePath?: boolean; // if false, only strip '/api' and preserve servicePath for forwarding
+  preserveOriginalPath?: boolean; // if true, do not rewrite the original request path
+}
+
+const createProxyOptions = (target: string, servicePath: string, opts?: { stripServicePath?: boolean, preserveOriginalPath?: boolean }): ProxyOptionsExt => {
+  const isStripServicePath = opts?.stripServicePath !== undefined ? opts!.stripServicePath : true;
+  const debugLog = (...args: any[]) => {
+    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_PROXY === 'true') {
+      // Use console.debug to keep standard console.log for general logs intact
+      console.debug(...args);
+    }
+  };
+  debugLog(`[PROXY OPTIONS] target=${target}, servicePath=${servicePath}, stripServicePath=${isStripServicePath}`);
+  return ({
+  // Debug: report if stripServicePath is set
   target,
   changeOrigin: true,
   timeout: 120000, // 120 seconds timeout
@@ -41,22 +68,50 @@ const createProxyOptions = (target: string, servicePath: string): Options => ({
   ws: true, // WebSocket support
   logLevel: 'debug', // Debug logging
   pathRewrite: (path) => {
-    const rewritten = path.replace(new RegExp(`^/api${servicePath}`), '');
-    console.log(`[PROXY] Rewriting: ${path} -> ${rewritten}`);
+    if (opts?.preserveOriginalPath) {
+      debugLog(`[PROXY] Preserving original path: ${path}`);
+      return path; // forward original path to upstream without rewrite
+    }
+
+    const rewritten = isStripServicePath
+      ? path.replace(new RegExp(`^/api${servicePath}`), '')
+      : path.replace(new RegExp(`^/api`), '');
+    debugLog(`[PROXY] Rewriting: ${path} -> ${rewritten} (stripServicePath=${isStripServicePath})`);
     return rewritten;
   },
   onProxyReq: (proxyReq, req, res) => {
-    console.log(`\n=== PROXY REQUEST ===`);
-    console.log(`Original: ${req.method} ${req.url}`);
-    console.log(`Target: ${proxyReq.method} ${proxyReq.path}`);
-    console.log(`Headers:`, proxyReq.getHeaders());
-    console.log(`Content-Type: ${req.headers['content-type']}`);
-    console.log(`Content-Length: ${req.headers['content-length']}`);
+    debugLog(`\n=== PROXY REQUEST ===`);
+    debugLog(`Original: ${req.method} ${req.url}`);
+    debugLog(`Target: ${proxyReq.method} ${proxyReq.path}`);
+    debugLog(`Headers:`, proxyReq.getHeaders());
+    debugLog(`Content-Type: ${req.headers['content-type']}`);
+    debugLog(`Content-Length: ${req.headers['content-length']}`);
   },
   onProxyRes: (proxyRes, req, res) => {
-    console.log(`\n=== PROXY RESPONSE ===`);
-    console.log(`Status: ${proxyRes.statusCode}`);
-    console.log(`Time: ${Date.now()}ms`);
+    debugLog(`\n=== PROXY RESPONSE ===`);
+    debugLog(`Status: ${proxyRes.statusCode}`);
+    debugLog(`Time: ${Date.now()}ms`);
+    // Remove any upstream CORS headers so the API gateway's own CORS middleware
+    // controls the Access-Control-* headers returned to the browser. This avoids
+    // cases where upstream services set a wildcard '*' and break credentialed requests.
+    try {
+      if (proxyRes.headers) {
+        // For diagnostics: log if upstream set any cookies (refresh token)
+        if (process.env.NODE_ENV === 'development' || process.env.DEBUG_PROXY === 'true') {
+          debugLog('Proxy response headers (sample):', {
+            'set-cookie': proxyRes.headers['set-cookie']?.slice?.(0, 5) || proxyRes.headers['set-cookie'],
+          });
+        }
+
+        // Remove any upstream CORS headers so the API gateway's own CORS middleware
+        // controls the Access-Control-* headers returned to the browser. This avoids
+        // cases where upstream services set a wildcard '*' and break credentialed requests.
+        delete proxyRes.headers['access-control-allow-origin'];
+        delete proxyRes.headers['access-control-allow-credentials'];
+      }
+    } catch (e) {
+      debugLog('Error cleaning proxy response headers', e);
+    }
   },
   onError: (err, req, res) => {
     console.error(`Proxy error for ${target}:`, err.message);
@@ -67,7 +122,8 @@ const createProxyOptions = (target: string, servicePath: string): Options => ({
       error: err.message
     });
   }
-});
+  });
+}
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -94,24 +150,26 @@ app.use('/api/users', createProxyMiddleware(createProxyOptions(services.user, '/
 app.use('/api/auth', createProxyMiddleware(createProxyOptions(services.user, '/auth')));
 
 // Route: EV Data Service (Vehicles, Trips, CO2 Calculation)
-app.use('/api/vehicles', createProxyMiddleware(createProxyOptions(services.evData, '/vehicles')));
-app.use('/api/trips', createProxyMiddleware(createProxyOptions(services.evData, '/trips')));
-app.use('/api/co2', createProxyMiddleware(createProxyOptions(services.evData, '/co2')));
+app.use('/api/vehicles', createProxyMiddleware(createProxyOptions(services.evData, '/vehicles', { preserveOriginalPath: true })));
+app.use('/api/trips', createProxyMiddleware(createProxyOptions(services.evData, '/trips', { preserveOriginalPath: true })));
+app.use('/api/co2', createProxyMiddleware(createProxyOptions(services.evData, '/co2', { preserveOriginalPath: true })));
 
 // Route: Carbon Credit Service (Wallet, Credits)
-app.use('/api/wallet', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/wallet')));
-app.use('/api/credits', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/credits')));
+// For carbon credit service, preserve the '/wallet' and '/credits' service path when proxied
+app.use('/api/wallet', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/wallet', { stripServicePath: false })));
+app.use('/api/credits', createProxyMiddleware(createProxyOptions(services.carbonCredit, '/credits', { stripServicePath: false })));
 
 // Route: Marketplace Service (Listings, Orders, Auctions)
-app.use('/api/listings', createProxyMiddleware(createProxyOptions(services.marketplace, '/listings')));
-app.use('/api/orders', createProxyMiddleware(createProxyOptions(services.marketplace, '/orders')));
+// For marketplace service, preserve '/listings' and '/orders' paths
+app.use('/api/listings', createProxyMiddleware(createProxyOptions(services.marketplace, '/listings', { stripServicePath: false })));
+app.use('/api/orders', createProxyMiddleware(createProxyOptions(services.marketplace, '/orders', { stripServicePath: false })));
 
 // Route: Payment Service
 app.use('/api/payments', createProxyMiddleware(createProxyOptions(services.payment, '/payments')));
 app.use('/api/transactions', createProxyMiddleware(createProxyOptions(services.payment, '/transactions')));
 
 // Route: Verification Service (CVA, KYC, Certificates)
-app.use('/api/verification', createProxyMiddleware(createProxyOptions(services.verification, '/verification')));
+app.use('/api/verification', createProxyMiddleware(createProxyOptions(services.verification, '/verification', { preserveOriginalPath: true })));
 app.use('/api/kyc', createProxyMiddleware(createProxyOptions(services.verification, '/kyc')));
 app.use('/api/certificates', createProxyMiddleware(createProxyOptions(services.verification, '/certificates')));
 app.use('/api/issuances', createProxyMiddleware(createProxyOptions(services.verification, '/issuances')));
@@ -119,8 +177,8 @@ app.use('/api/issuances', createProxyMiddleware(createProxyOptions(services.veri
 // Route: Notification Service
 app.use('/api/notifications', createProxyMiddleware(createProxyOptions(services.notification, '/notifications')));
 
-// Route: Reporting Service (Analytics, Reports)
-app.use('/api/reports', createProxyMiddleware(createProxyOptions(services.reporting, '/reports')));
+// Route: Reporting Service (Analytics, Reports) - preserve '/reports' path so the service can mount '/reports'
+app.use('/api/reports', createProxyMiddleware(createProxyOptions(services.reporting, '/reports', { stripServicePath: false })));
 app.use('/api/analytics', createProxyMiddleware(createProxyOptions(services.reporting, '/analytics')));
 
 // Route: AI Service (Price Prediction)

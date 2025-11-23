@@ -204,6 +204,47 @@ export class PaymentController {
         }
     };
 
+    // Create a Stripe Connect account (Express). In mock mode, return a fake account ID
+    createConnectedAccount = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { country = 'US' } = req.body;
+            if (envConfig.STRIPE_CONNECT_MOCK) {
+                res.json({ success: true, data: { account_id: `acct_mock_${uuidv4()}` } });
+                return;
+            }
+            const account = await stripe.accounts.create({ type: 'express', country });
+            res.json({ success: true, data: { account_id: account.id } });
+        } catch (error) {
+            console.error('Create connected account error:', error);
+            res.status(500).json({ success: false, message: 'Failed to create connected account' });
+        }
+    };
+
+    // Create an onboarding link for a connected Stripe account
+    createAccountLink = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { account_id } = req.body;
+            if (!account_id) {
+                res.status(400).json({ success: false, message: 'account_id is required' });
+                return;
+            }
+            if (envConfig.STRIPE_CONNECT_MOCK) {
+                res.json({ success: true, data: { url: `https://stripe.mock/onboard/${account_id}` } });
+                return;
+            }
+            const link = await stripe.accountLinks.create({
+                account: account_id,
+                refresh_url: `${process.env.DASHBOARD_URL || 'http://localhost:5173'}/connected-accounts/refresh`,
+                return_url: `${process.env.DASHBOARD_URL || 'http://localhost:5173'}/connected-accounts/complete`,
+                type: 'account_onboarding'
+            });
+            res.json({ success: true, data: { url: link.url } });
+        } catch (error) {
+            console.error('Create account link error:', error);
+            res.status(500).json({ success: false, message: 'Failed to create account link' });
+        }
+    };
+
     releaseEscrow = async (req: Request, res: Response): Promise<void> => {
         try {
             const { escrow_id } = req.body;
@@ -320,13 +361,33 @@ export class PaymentController {
 
             if (withdrawal.method === WithdrawalMethod.STRIPE) {
                 // Stripe Connect integration for payouts
-                // Implementation depends on Stripe Connect setup
+                const accountId = withdrawal.bank_details?.stripe_account_id || withdrawal.bank_details?.stripe_account;
+                if (accountId && envConfig.STRIPE_CONNECT_MOCK === false) {
+                    try {
+                        const transfer = await stripe.transfers.create({
+                            amount: Math.round(withdrawal.net_amount * 100),
+                            currency: 'usd',
+                            destination: accountId,
+                            metadata: { withdrawal_id: withdrawal.id }
+                        });
+                        withdrawal.transaction_id = transfer.id;
+                    } catch (err: any) {
+                        console.error('Stripe transfer error:', err);
+                        withdrawal.status = WithdrawalStatus.FAILED;
+                        await this.withdrawalRepository.save(withdrawal);
+                        res.status(500).json({ success: false, message: 'Stripe transfer failed: ' + (err.message || '') });
+                        return;
+                    }
+                } else {
+                    // Mock payout (dev mode or missing accountId): simulate a transaction ID
+                    withdrawal.transaction_id = `mock-stripe-tx-${uuidv4()}`;
+                }
             }
 
             withdrawal.status = WithdrawalStatus.COMPLETED;
             await this.withdrawalRepository.save(withdrawal);
 
-            res.json({
+            res.status(200).json({
                 success: true,
                 data: {
                     withdrawal_id: withdrawal.id,

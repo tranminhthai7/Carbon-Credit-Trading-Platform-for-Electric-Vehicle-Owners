@@ -18,6 +18,7 @@ import {
 import { Visibility, VisibilityOff, Nature } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getDashboardPathForRole } from '../../utils/navigation';
 import { UserRole } from '../../types';
 import { handleApiError } from '../../services/api';
 
@@ -59,8 +60,9 @@ export const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.name, formData.role, formData.phoneNumber);
-      navigate('/dashboard');
+      const auth = await register(formData.email, formData.password, formData.name, formData.role, formData.phoneNumber);
+      const destination = getDashboardPathForRole(auth.user.role);
+      navigate(destination);
     } catch (err) {
       setError(handleApiError(err));
     } finally {

@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install repo dependencies
+        run: |
+          cd services/ev-data-service && npm ci
+          cd ../../services/payment-service && npm ci
+          cd ../../services/carbon-credit-service && npm ci
+          cd ../../services/marketplace-service && npm ci
+          cd ../../services/verification-service && npm ci
+          cd ../../services/user-service && npm ci
+          cd ../../services/reporting-service && npm ci
+          cd ../../services/notification-service && npm ci
+      - name: Run tests
+        run: |
+          echo 'Running tests in all services'
+          cd services/ev-data-service && npm test
+          cd ../payment-service && npm test
+          cd ../carbon-credit-service && npm test
+          cd ../marketplace-service && npm test
+          cd ../verification-service && npm test
+          cd ../user-service && npm test
+          cd ../reporting-service && npm test
+          cd ../notification-service && npm test
+name: CI
+
+on:
+  push:
+    branches: [ main, feat/*, '*']
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Run tests across services
+        run: |
+          set -e
+          cd services
+          for d in */ ; do
+            if [ -f "$d/package.json" ]; then
+              echo "\n---- Testing $d ----\n"
+              pushd $d
+              npm ci --silent
+              npm test --silent || { echo "Tests failed in $d"; exit 1; }
+              popd
+            fi
+          done
+        shell: bash

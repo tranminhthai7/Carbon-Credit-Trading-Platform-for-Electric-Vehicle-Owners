@@ -14,6 +14,7 @@ export interface EnvConfig {
   STRIPE_PUBLISHABLE_KEY?: string;
   PAYPAL_CLIENT_ID?: string;
   PAYPAL_CLIENT_SECRET?: string;
+  STRIPE_CONNECT_MOCK?: boolean;
 }
 
 const getEnvConfig = (): EnvConfig => {
@@ -43,7 +44,8 @@ const getEnvConfig = (): EnvConfig => {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY!,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
-    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET,
+    STRIPE_CONNECT_MOCK: (process.env.STRIPE_CONNECT_MOCK || 'false').toLowerCase() === 'true',
   };
 };
 

@@ -7,8 +7,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (development/demo environment)
+# Use `npm install` so local package.json updates (added jwt) don't require updating the lock file
+RUN npm install
 
 # Copy source code
 COPY . .

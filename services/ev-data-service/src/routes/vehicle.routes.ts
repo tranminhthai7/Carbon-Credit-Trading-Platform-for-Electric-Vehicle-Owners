@@ -1,4 +1,5 @@
 import express from 'express';
+import multer from 'multer';
 import {
   registerVehicle,
   getVehicles,
@@ -6,6 +7,8 @@ import {
   updateVehicle,
   deleteVehicle,
 } from '../controllers/vehicle.controller';
+import { generateCredits, importTrips } from '../controllers/trip.controller';
+import { pruneVehicleIdempotencyKeys } from '../controllers/trip.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = express.Router();
@@ -27,5 +30,17 @@ router.put('/:id', updateVehicle);
 
 // DELETE /api/vehicles/:id - Delete vehicle
 router.delete('/:id', deleteVehicle);
+
+// Generate credits from vehicle's CO2 savings
+router.post('/:id/generate-credits', generateCredits);
+
+// multer memory storage - parse CSV file in memory
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// Import trips from JSON payload (array of trips) or upload CSV via multipart/form-data (field `file`)
+router.post('/:id/trips/import', upload.single('file'), importTrips);
+
+// Prune idempotency keys for a vehicle (admin/user endpoint)
+router.post('/:id/prune-idempotency-keys', pruneVehicleIdempotencyKeys);
 
 export default router;

@@ -2,16 +2,13 @@
 FROM node:18-alpine
 
 # Create app directory
-WORKDIR /app
+WORKDIR /workspace/services/ev-data-service
 
-# Copy package files
-COPY package*.json ./
+# Copy the whole repository into /workspace so local file: dependencies resolve
+COPY . /workspace
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
+# Install dependencies for this service
+RUN cd /workspace/services/ev-data-service && npm install --no-audit --no-fund
 
 # Expose port
 EXPOSE 3002

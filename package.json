@@ -1,0 +1,19 @@
+{
+  "name": "carbon-credit-ev-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.4.0"
+  },
+  "scripts": {
+    "demo:up": "docker compose up -d --build",
+    "demo:down": "docker compose down -v",
+    "demo:seed": "node ./scripts/seed-dev.js --force-db --verbose",
+    "demo:e2e:marketplace": "cd frontend && $env:NODE_PATH='..\\frontend\\node_modules' ; npm run e2e:marketplace",
+    "demo:run": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/run-demo.ps1",
+    "demo:run:prod": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/run-demo.ps1 -Prod",
+    "demo:run:keepalive": "powershell -ExecutionPolicy Bypass -NoProfile -File ./scripts/run-demo.ps1 -KeepAlive",
+    "demo:lint": "cd services/marketplace-service && npm ci && npm run lint",
+    "test:all": "powershell -NoProfile -Command \"Get-ChildItem -Path services -Directory | ForEach-Object { Write-Host '--- Testing ' $_.Name; $package = Join-Path $_.FullName 'package.json'; if (Test-Path $package) { Push-Location $_.FullName; npm ci; npm test; Pop-Location } }\""
+  }
+}
