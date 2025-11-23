@@ -17,7 +17,7 @@
     "ioredis": "^5.8.2",
     "nodemailer": "^6.10.1",
     "pdfkit": "^0.14.0",
-    "pg": "^8.11.0",
+    "pg": "^8.16.3",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
@@ -25,6 +25,7 @@
     "@types/handlebars": "^4.1.0",
     "@types/node": "^20.19.24",
     "@types/nodemailer": "^7.0.3",
+    "@types/pg": "^8.15.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
