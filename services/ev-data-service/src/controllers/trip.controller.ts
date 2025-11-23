@@ -95,6 +95,10 @@ export const addTrip = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (error) {
+      // Log validation details to help debug client 400 responses
+      try {
+        console.warn('Validation failed for addTrip:', JSON.stringify(error.details.map((d:any) => ({ path: d.path, message: d.message }))))
+      } catch (e) { console.warn('Validation failed for addTrip (unable to stringify details)', error); }
       res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -443,6 +447,10 @@ export const addTripToDefaultVehicle = async (req: Request, res: Response): Prom
     normalized.end_location = normalizeLocation(normalized.end_location, 'end');
     const { error, value } = addTripSchema.validate(normalized, { abortEarly: false });
     if (error) {
+      // Log validation details for addTripToDefaultVehicle
+      try {
+        console.warn('Validation failed for addTripToDefaultVehicle:', JSON.stringify(error.details.map((d:any) => ({ path: d.path, message: d.message }))))
+      } catch (e) { console.warn('Validation failed for addTripToDefaultVehicle (unable to stringify details)', error); }
       res.status(400).json({ success: false, message: 'Validation failed', errors: error.details.map((d:any) => ({ field: d.path.join('.'), message: d.message })) });
       return;
     }
