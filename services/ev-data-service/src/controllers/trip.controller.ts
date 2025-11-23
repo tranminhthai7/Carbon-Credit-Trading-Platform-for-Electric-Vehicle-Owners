@@ -33,12 +33,72 @@ export const addTrip = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Normalize payload to accept either camelCase or snake_case from clients
+    const normalized = {
+      start_time: req.body.start_time ?? req.body.startTime,
+      end_time: req.body.end_time ?? req.body.endTime,
+      distance_km: req.body.distance_km ?? req.body.distance ?? req.body.distanceKm,
+      start_location: req.body.start_location ?? req.body.startLocation,
+      end_location: req.body.end_location ?? req.body.endLocation,
+      notes: req.body.notes ?? req.body.note ?? undefined,
+      // accept optional energyConsumed (camel) and map to energy_consumed (snake) for storage/use
+      energy_consumed: req.body.energy_consumed ?? req.body.energyConsumed ?? undefined,
+    };
+
+    // Helper: convert incoming location values to { latitude:number, longitude:number, address?:string }
+    const normalizeLocation = (value: any, prefix: string): any => {
+      // If client provided explicit lat/long fields like start_lat/start_long or startLat/startLong
+      const latCandidates = [`${prefix}_lat`, `${prefix}Lat`, 'lat', 'latitude'];
+      const lonCandidates = [`${prefix}_long`, `${prefix}Long`, 'lon', 'lng', 'longitude'];
+      for (const latKey of latCandidates) {
+        for (const lonKey of lonCandidates) {
+          if (latKey in req.body && lonKey in req.body) {
+            return { latitude: Number(req.body[latKey]), longitude: Number(req.body[lonKey]) };
+          }
+        }
+      }
+
+      // If value is a string try parsing JSON or coordinate strings like `"10,20"` or "10 20"
+      if (typeof value === 'string') {
+        // try JSON
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {
+          // not JSON, try simple coords
+        }
+        const coordMatch = value.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+        if (coordMatch) {
+          return { latitude: Number(coordMatch[1]), longitude: Number(coordMatch[2]) };
+        }
+        return undefined;
+      }
+
+      // If object, coerce string numbers to actual numbers
+      if (value && typeof value === 'object') {
+        const out: any = { ...value };
+        if (out.latitude && typeof out.latitude === 'string') out.latitude = Number(out.latitude);
+        if (out.longitude && typeof out.longitude === 'string') out.longitude = Number(out.longitude);
+        return out;
+      }
+
+      return undefined;
+    };
+
+    // Apply normalization (if provided as a string or separate lat/long fields)
+    normalized.start_location = normalizeLocation(normalized.start_location, 'start');
+    normalized.end_location = normalizeLocation(normalized.end_location, 'end');
+
     // Validate request body
-    const { error, value } = addTripSchema.validate(req.body, {
+    const { error, value } = addTripSchema.validate(normalized, {
       abortEarly: false,
     });
 
     if (error) {
+      // Log validation details to help debug client 400 responses
+      try {
+        console.warn('Validation failed for addTrip:', JSON.stringify(error.details.map((d:any) => ({ path: d.path, message: d.message }))))
+      } catch (e) { console.warn('Validation failed for addTrip (unable to stringify details)', error); }
       res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -106,6 +166,7 @@ export const addTrip = async (req: Request, res: Response): Promise<void> => {
       start_time: startTime,
       end_time: endTime,
       distance_km: distanceKm,
+      energy_consumed: value.energy_consumed ?? value.energyConsumed ?? null,
       co2_saved_kg: parseFloat(co2_saved_kg.toFixed(3)), // Round to 3 decimal places
       start_location: value.start_location,
       end_location: value.end_location,
@@ -156,9 +217,15 @@ export const pruneVehicleIdempotencyKeys = async (req: any, res: any): Promise<v
   try {
     const { id: vehicleId } = req.params;
     const userId = (req as any).user?.id;
-    if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
     const vehicle = await Vehicle.findOne({ _id: vehicleId, user_id: userId });
-    if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    if (!vehicle) {
+      res.status(404).json({ success: false, message: 'Vehicle not found' });
+      return;
+    }
 
     vehicle.import_keys = pruneKeys(vehicle.import_keys);
     vehicle.credit_request_keys = pruneKeys(vehicle.credit_request_keys);
@@ -257,6 +324,178 @@ export const getVehicleTrips = async (
       message: 'Failed to retrieve trips',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
+  }
+};
+
+/**
+ * @route   GET /api/vehicles/trips/user
+ * @desc    Return all trips for the currently authenticated user (across all their vehicles)
+ * @access  Private
+ */
+export const getMyTrips = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+
+    // Find all vehicles belonging to this user
+    const vehicles = await Vehicle.find({ user_id: userId }).lean();
+
+    // Flatten trips and normalize to frontend shape
+    const trips: any[] = [];
+    for (const v of vehicles) {
+      const vehicleId = (v as any)._id?.toString?.() || (v as any)._id;
+      for (const t of v.trips || []) {
+        trips.push({
+          id: (t as any)._id?.toString?.() || undefined,
+          vehicleId,
+          userId,
+          startTime: t.start_time,
+          endTime: t.end_time,
+          distance: t.distance_km,
+          energyConsumed: (t as any).energy_consumed ?? (t as any).energyConsumed ?? null,
+          carbonSaved: t.co2_saved_kg,
+          verificationStatus: 'PENDING',
+          createdAt: t.created_at,
+        });
+      }
+    }
+
+    // return as array
+    res.json(trips);
+  } catch (err: any) {
+    console.error('getMyTrips error', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch trips', error: err?.message });
+  }
+};
+
+/**
+ * @route   POST /api/vehicles/trips
+ * @desc    Create a trip for the current authenticated user.
+ *          Accepts payload with or without vehicleId. If vehicleId is omitted
+ *          the server will attach the trip to the first vehicle found for the user.
+ */
+export const addTripToDefaultVehicle = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+
+    // accept payload { vehicleId?, distance, energyConsumed, startTime, endTime, startLocation?, endLocation?, notes? }
+    const { vehicleId } = req.body as any;
+
+    // determine target vehicle
+    let vehicle = null as any;
+    if (vehicleId) {
+      vehicle = await Vehicle.findOne({ _id: vehicleId, user_id: userId });
+      if (!vehicle) {
+        res.status(404).json({ success: false, message: 'Vehicle not found or not owned by user' });
+        return;
+      }
+    } else {
+      vehicle = await Vehicle.findOne({ user_id: userId });
+      if (!vehicle) {
+        res.status(400).json({ success: false, message: 'No vehicles found for user - create a vehicle first' });
+        return;
+      }
+    }
+
+    // reuse validation and creation logic from addTrip - validate body
+    const normalized = {
+      start_time: req.body.start_time ?? req.body.startTime,
+      end_time: req.body.end_time ?? req.body.endTime,
+      distance_km: req.body.distance_km ?? req.body.distance ?? req.body.distanceKm,
+      start_location: req.body.start_location ?? req.body.startLocation,
+      end_location: req.body.end_location ?? req.body.endLocation,
+      notes: req.body.notes ?? req.body.note ?? undefined,
+      energy_consumed: req.body.energy_consumed ?? req.body.energyConsumed ?? undefined,
+    };
+    // Apply same normalization as addTrip
+    const normalizeLocation = (value: any, prefix: string): any => {
+      const latCandidates = [`${prefix}_lat`, `${prefix}Lat`, 'lat', 'latitude'];
+      const lonCandidates = [`${prefix}_long`, `${prefix}Long`, 'lon', 'lng', 'longitude'];
+      for (const latKey of latCandidates) {
+        for (const lonKey of lonCandidates) {
+          if (latKey in req.body && lonKey in req.body) {
+            return { latitude: Number(req.body[latKey]), longitude: Number(req.body[lonKey]) };
+          }
+        }
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {}
+        const coordMatch = value.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+        if (coordMatch) return { latitude: Number(coordMatch[1]), longitude: Number(coordMatch[2]) };
+        return undefined;
+      }
+      if (value && typeof value === 'object') {
+        const out: any = { ...value };
+        if (out.latitude && typeof out.latitude === 'string') out.latitude = Number(out.latitude);
+        if (out.longitude && typeof out.longitude === 'string') out.longitude = Number(out.longitude);
+        return out;
+      }
+      return undefined;
+    };
+
+    normalized.start_location = normalizeLocation(normalized.start_location, 'start');
+    normalized.end_location = normalizeLocation(normalized.end_location, 'end');
+    const { error, value } = addTripSchema.validate(normalized, { abortEarly: false });
+    if (error) {
+      // Log validation details for addTripToDefaultVehicle
+      try {
+        console.warn('Validation failed for addTripToDefaultVehicle:', JSON.stringify(error.details.map((d:any) => ({ path: d.path, message: d.message }))))
+      } catch (e) { console.warn('Validation failed for addTripToDefaultVehicle (unable to stringify details)', error); }
+      res.status(400).json({ success: false, message: 'Validation failed', errors: error.details.map((d:any) => ({ field: d.path.join('.'), message: d.message })) });
+      return;
+    }
+
+    const distanceKm = Number(value.distance_km || value.distance || 0);
+    const startTime = new Date(value.start_time || value.startTime);
+    const endTime = new Date(value.end_time || value.endTime);
+
+    const co2_saved_kg = parseFloat((distanceKm * CO2_SAVED_PER_KM).toFixed(3));
+
+    const newTrip = {
+      start_time: startTime,
+      end_time: endTime,
+      distance_km: distanceKm,
+      energy_consumed: value.energy_consumed ?? value.energyConsumed ?? null,
+      co2_saved_kg,
+      start_location: value.start_location || value.startLocation || undefined,
+      end_location: value.end_location || value.endLocation || undefined,
+      notes: value.notes || undefined,
+      created_at: new Date(),
+    } as any;
+
+    vehicle.trips.push(newTrip);
+    vehicle.total_distance_km = (vehicle.total_distance_km || 0) + distanceKm;
+    vehicle.total_co2_saved_kg = (vehicle.total_co2_saved_kg || 0) + co2_saved_kg;
+    await vehicle.save();
+
+    // return normalized shape used by frontend
+    const tripOut = {
+      id: newTrip._id?.toString?.() || undefined,
+      vehicleId: vehicle._id?.toString?.() || vehicle._id,
+      userId,
+      startTime: newTrip.start_time,
+      endTime: newTrip.end_time,
+      distance: newTrip.distance_km,
+      energyConsumed: value.energy_consumed ?? value.energyConsumed ?? null,
+      carbonSaved: newTrip.co2_saved_kg,
+      verificationStatus: 'PENDING',
+      createdAt: newTrip.created_at,
+    };
+
+    res.status(201).json({ success: true, message: 'Trip created', data: tripOut });
+  } catch (err: any) {
+    console.error('addTripToDefaultVehicle error', err);
+    res.status(500).json({ success: false, message: 'Failed to create trip', error: err?.message });
   }
 };
 
@@ -467,7 +706,10 @@ export const generateCredits = async (req: any, res: any): Promise<void> => {
     const userId = (req as any).user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
     const vehicle = await Vehicle.findOne({ _id: vehicleId, user_id: userId });
-    if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    if (!vehicle) {
+      res.status(404).json({ success: false, message: 'Vehicle not found' });
+      return;
+    }
 
     // compute total CO2 saved for all trips (kg) or optionally for a provided range
     let filteredTrips = vehicle.trips || [];
@@ -484,13 +726,15 @@ export const generateCredits = async (req: any, res: any): Promise<void> => {
     // convert to credits: 1 credit = 1000 kg CO2 (1 ton)
     const creditsAmount = Math.floor(totalCO2Kg / 1000);
     if (creditsAmount < 1) {
-      return res.status(400).json({ success: false, message: 'Not enough CO2 saved to generate credits' });
+      res.status(400).json({ success: false, message: 'Not enough CO2 saved to generate credits' });
+      return;
     }
 
     // Idempotency: check for header to prevent duplicate requests
     const idempotencyKey = (req.headers && (req.headers['idempotency-key'] || req.headers['Idempotency-Key'])) || req.body?.idempotency_key || null;
     if (idempotencyKey && hasProcessedKey(vehicle.credit_request_keys, idempotencyKey)) {
-      return res.status(200).json({ success: true, message: 'Credit generation already processed', data: { creditsAmount } });
+      res.status(200).json({ success: true, message: 'Credit generation already processed', data: { creditsAmount } });
+      return;
     }
 
     // submit credit request to carbon credit service
@@ -510,9 +754,15 @@ export const importTrips = async (req: any, res: any): Promise<void> => {
   try {
     const { id: vehicleId } = req.params;
     const userId = (req as any).user?.id;
-    if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
     const vehicle = await Vehicle.findOne({ _id: vehicleId, user_id: userId });
-    if (!vehicle) return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    if (!vehicle) {
+      res.status(404).json({ success: false, message: 'Vehicle not found' });
+      return;
+    }
 
     let trips: any[] = [];
     const idempotencyKey = (req.headers && (req.headers['idempotency-key'] || req.headers['Idempotency-Key'])) || req.body?.idempotency_key || null;
@@ -533,14 +783,19 @@ export const importTrips = async (req: any, res: any): Promise<void> => {
         trips = trips.concat(parsed);
       } catch (err: any) {
         console.error('CSV parse error:', err);
-        return res.status(400).json({ success: false, message: 'Failed to parse CSV: ' + (err.message || '') });
+        res.status(400).json({ success: false, message: 'Failed to parse CSV: ' + (err.message || '') });
+        return;
       }
     }
-    if (!Array.isArray(trips) || trips.length === 0) return res.status(400).json({ success: false, message: 'Trips array or CSV file is required' });
+    if (!Array.isArray(trips) || trips.length === 0) {
+      res.status(400).json({ success: false, message: 'Trips array or CSV file is required' });
+      return;
+    }
 
     // Idempotency: if idempotency key is present and previously processed, return cached response
     if (idempotencyKey && hasProcessedKey(vehicle.import_keys, idempotencyKey)) {
-      return res.status(200).json({ success: true, message: 'Import previously processed', data: { total_trips: vehicle.trips.length } });
+      res.status(200).json({ success: true, message: 'Import previously processed', data: { total_trips: vehicle.trips.length } });
+      return;
     }
 
     console.debug('[IMPORT] Found trips count to process:', trips.length, 'for vehicle:', vehicleId, 'user:', userId, 'idempotencyKey:', idempotencyKey);

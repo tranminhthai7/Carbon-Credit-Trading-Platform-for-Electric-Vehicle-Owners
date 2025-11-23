@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller';
+import { register, login, refresh, logout, getProfile, updateProfile } from '../controllers/auth.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -18,5 +19,30 @@ router.post('/register', register);
  * Note: API Gateway routes /api/users/login to this endpoint
  */
 router.post('/login', login);
+
+/**
+ * @route   POST /refresh
+ * @desc    Refresh access token using refresh token cookie
+ * @access  Public (reads cookie)
+ */
+router.post('/refresh', refresh);
+
+/**
+ * @route   POST /logout
+ * @desc    Logout and clear refresh token
+ */
+router.post('/logout', logout);
+
+/**
+ * @route   GET /profile
+ * @desc    Get current user's profile
+ */
+router.get('/profile', authMiddleware, getProfile);
+
+/**
+ * @route   PUT /:id
+ * @desc    Update user profile (protected)
+ */
+router.put('/:id', authMiddleware, updateProfile);
 
 export default router;

@@ -1,5 +1,7 @@
 // frontend/src/pages/admin/AdminDashboard.tsx
 import React, { useState, useEffect } from 'react';
+// antd styles (v5 uses reset.css)
+import 'antd/dist/reset.css';
 import {
   Card,
   Row,

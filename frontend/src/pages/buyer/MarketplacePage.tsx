@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
 import { marketplaceService } from '../../services/marketplace.service';
+import { useAuth } from '../../context/AuthContext';
 import { Listing } from '../../types';
 import { format } from 'date-fns';
 
@@ -24,6 +25,7 @@ export const MarketplacePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [quantity, setQuantity] = useState('');
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchListings();
@@ -43,7 +45,9 @@ export const MarketplacePage: React.FC = () => {
   const handlePurchase = async () => {
     if (!selectedListing) return;
     try {
-      await marketplaceService.purchaseListing(selectedListing.id, Number(quantity));
+      // backend expects buyerId in body — use current authenticated user id
+      if (!user?.id) throw new Error('User not authenticated');
+      await marketplaceService.purchaseListing(selectedListing.id, user.id);
       setSelectedListing(null);
       setQuantity('');
       fetchListings();
@@ -118,14 +122,14 @@ export const MarketplacePage: React.FC = () => {
           <Typography variant="body2" gutterBottom>
             Price: ${selectedListing?.pricePerUnit.toFixed(2)} per kg
           </Typography>
-          <TextField
+            <TextField
             fullWidth
             label="Quantity (kg)"
             type="number"
             value={quantity}
             onChange={(e: any) => setQuantity(e.target.value)}
             margin="normal"
-            inputProps={{ max: selectedListing?.quantity }}
+              inputProps={{ max: selectedListing?.quantity?.toString?.() }}
           />
           {quantity && selectedListing && (
             <Typography variant="h6" sx={{ mt: 2 }}>

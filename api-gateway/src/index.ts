@@ -91,6 +91,27 @@ const createProxyOptions = (target: string, servicePath: string, opts?: { stripS
     debugLog(`\n=== PROXY RESPONSE ===`);
     debugLog(`Status: ${proxyRes.statusCode}`);
     debugLog(`Time: ${Date.now()}ms`);
+    // Remove any upstream CORS headers so the API gateway's own CORS middleware
+    // controls the Access-Control-* headers returned to the browser. This avoids
+    // cases where upstream services set a wildcard '*' and break credentialed requests.
+    try {
+      if (proxyRes.headers) {
+        // For diagnostics: log if upstream set any cookies (refresh token)
+        if (process.env.NODE_ENV === 'development' || process.env.DEBUG_PROXY === 'true') {
+          debugLog('Proxy response headers (sample):', {
+            'set-cookie': proxyRes.headers['set-cookie']?.slice?.(0, 5) || proxyRes.headers['set-cookie'],
+          });
+        }
+
+        // Remove any upstream CORS headers so the API gateway's own CORS middleware
+        // controls the Access-Control-* headers returned to the browser. This avoids
+        // cases where upstream services set a wildcard '*' and break credentialed requests.
+        delete proxyRes.headers['access-control-allow-origin'];
+        delete proxyRes.headers['access-control-allow-credentials'];
+      }
+    } catch (e) {
+      debugLog('Error cleaning proxy response headers', e);
+    }
   },
   onError: (err, req, res) => {
     console.error(`Proxy error for ${target}:`, err.message);

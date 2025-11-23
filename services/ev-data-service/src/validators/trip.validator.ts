@@ -30,6 +30,11 @@ export const addTripSchema = Joi.object({
       'number.max': 'Distance cannot exceed 10,000 km',
       'any.required': 'Distance is required',
     }),
+    energy_consumed: Joi.number().min(0).max(100000).optional().messages({
+      'number.base': 'Energy consumed must be a number',
+      'number.min': 'Energy consumed must be non-negative',
+      'number.max': 'Energy consumed is too large',
+    }),
   start_location: Joi.object({
     latitude: Joi.number().min(-90).max(90).messages({
       'number.min': 'Latitude must be between -90 and 90',

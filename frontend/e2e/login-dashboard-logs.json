@@ -1,0 +1,61 @@
+[
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/",
+    "status": 200
+  },
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/assets/index-DoxG__3e.js",
+    "status": 200
+  },
+  {
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/favicon.ico",
+    "status": 404
+  },
+  {
+    "type": "console",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/favicon.ico",
+    "status": 404
+  },
+  {
+    "type": "console",
+    "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o"
+  },
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/assets/index-DoxG__3e.js",
+    "status": 200
+  },
+  {
+    "type": "requestfinished",
+    "url": "http://localhost:5173/owner/dashboard",
+    "status": 200
+  },
+  {
+    "type": "console",
+    "text": "JSHandle@error"
+  },
+  {
+    "type": "pageerror",
+    "text": "TypeError: Cannot read properties of undefined (reading 'charAt')\n    at ap (http://localhost:5173/assets/index-DoxG__3e.js:239:21279)\n    at Xx (http://localhost:5173/assets/index-DoxG__3e.js:38:17018)\n    at MI (http://localhost:5173/assets/index-DoxG__3e.js:40:44058)\n    at SI (http://localhost:5173/assets/index-DoxG__3e.js:40:39790)\n    at Fj (http://localhost:5173/assets/index-DoxG__3e.js:40:39718)\n    at vh (http://localhost:5173/assets/index-DoxG__3e.js:40:39570)\n    at i0 (http://localhost:5173/assets/index-DoxG__3e.js:40:35934)\n    at bI (http://localhost:5173/assets/index-DoxG__3e.js:40:34883)\n    at M (http://localhost:5173/assets/index-DoxG__3e.js:25:1548)\n    at D (http://localhost:5173/assets/index-DoxG__3e.js:25:1907)"
+  },
+  {
+    "type": "dom",
+    "domInfo": {
+      "htmlLength": 0,
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwOTg0Y2IyMC0yNzFmLTQ3OTEtODVjNi1kOTM3NmJiZWY1NTYiLCJlbWFpbCI6InZpc3VhbC1tYW51YWwtMTM0MDc5OTQ4NzMwNTU1Nzg0QGV4YW1wbGUuY29tIiwicm9sZSI6ImV2X293bmVyIiwiaWF0IjoxNzYzNTI5NDk5LCJleHAiOjE3NjM2MTU4OTl9.IcM6xJ39VmVhwW3P3MOeMqUmEOV_Kl8qSSkTGfBDZgQ",
+      "user": "{\"id\":\"0984cb20-271f-4791-85c6-d9376bbef556\",\"email\":\"visual-manual-134079948730555784@example.com\",\"role\":\"ev_owner\",\"full_name\":\"Visual Manual\",\"phone\":null}",
+      "title": "Carbon Credits Marketplace (EV)"
+    }
+  }
+]
