@@ -65,6 +65,12 @@ const navItems: NavItem[] = [
     roles: [UserRole.EV_OWNER],
   },
   {
+    title: 'Vehicles',
+    path: '/owner/vehicles',
+    icon: <DirectionsCar />,
+    roles: [UserRole.EV_OWNER],
+  },
+  {
     title: 'My Listings',
     path: '/owner/listings',
     icon: <Storefront />,

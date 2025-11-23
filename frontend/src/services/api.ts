@@ -27,7 +27,7 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: any) => {
     // DEV: log rich error details for easier troubleshooting (response body, request body)
     if (import.meta.env.DEV) {
       try {
@@ -89,7 +89,7 @@ apiClient.interceptors.response.use(
             // fall through and clear auth (refresh failed)
             if (import.meta.env.DEV) {
               // eslint-disable-next-line no-console
-              console.debug('[apiClient] refresh attempt failed (will clear auth)', refreshErr?.response?.data || refreshErr?.message || refreshErr);
+              console.debug('[apiClient] refresh attempt failed (will clear auth)', (refreshErr as any)?.response?.data || (refreshErr as any)?.message || refreshErr);
             }
           if (import.meta.env.DEV) {
             // eslint-disable-next-line no-console

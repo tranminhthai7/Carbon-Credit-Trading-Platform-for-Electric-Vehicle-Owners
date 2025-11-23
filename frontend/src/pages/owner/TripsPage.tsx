@@ -105,6 +105,36 @@ export const TripsPage: React.FC = () => {
     );
   }
 
+  // When user clicks "Record New Trip" we do a quick live-check for vehicles
+  // (handles the case where a vehicle was created elsewhere but the page's
+  // cached state is stale). If no vehicles exist we redirect to the vehicles
+  // page so the user can create one.
+  const handleOpenRecordModal = async () => {
+    // If we have a count of zero or still null, try to re-fetch live.
+    let current = vehiclesCount;
+    if (current === null || current === 0) {
+      try {
+        const vehicles = await tripService.getMyVehicles();
+        const len = Array.isArray(vehicles) ? vehicles.length : 0;
+        setVehiclesCount(len);
+        current = len;
+      } catch (err) {
+        console.warn('Failed to refresh vehicles before opening record modal', err);
+        // assume zero and send user to create vehicle page
+        setVehiclesCount(0);
+        current = 0;
+      }
+    }
+
+    if (!current || current === 0) {
+      // Help the user create a vehicle first
+      navigate('/owner/vehicles');
+      return;
+    }
+
+    setShowCreateModal(true);
+  };
+
   // If we know the user has zero vehicles, prompt them to create one before allowing recording trips.
   if (trips.length === 0) {
     return (
@@ -124,7 +154,24 @@ export const TripsPage: React.FC = () => {
               variant="contained"
               startIcon={<Add />}
               disabled={vehiclesCount === 0}
-              onClick={() => setShowCreateModal(true)}
+                  onClick={handleOpenRecordModal}
+                  // keyboard friendly: ensure Enter/Space open modal (fallback if click is blocked)
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      // prevent page scroll on Space
+                      e.preventDefault();
+                      void handleOpenRecordModal();
+                    }
+                  }}
+                  // pointer down can trigger in some edge cases where click is intercepted
+                  onPointerDown={(e) => {
+                    // allow normal click to proceed; use pointer down as a best-effort fallback
+                    // but only trigger when left mouse button / primary pointer
+                    if ((e as any).pointerType === 'mouse' || (e as any).pointerType === undefined) {
+                      // do not await — keep UI responsive
+                      void handleOpenRecordModal();
+                    }
+                  }}
             >
               Record New Trip
             </Button>
@@ -173,7 +220,7 @@ export const TripsPage: React.FC = () => {
             variant="contained"
             startIcon={<Add />}
             disabled={vehiclesCount === 0}
-            onClick={() => setShowCreateModal(true)}
+              onClick={handleOpenRecordModal}
           >
             Record New Trip
           </Button>
@@ -195,7 +242,6 @@ export const TripsPage: React.FC = () => {
           )}
         </div>
       </Box>
-
       <Card>
         <CardContent>
           <DataGrid

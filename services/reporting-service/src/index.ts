@@ -29,7 +29,7 @@ app.use('/reports', reportRoutes);
 app.use('/', reportRoutes);
 
 // MongoDB connect
-mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/reporting-service")
+mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://localhost:27017/reporting-service")
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 

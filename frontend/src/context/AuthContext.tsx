@@ -17,14 +17,14 @@ interface AuthContextType {
   loading: boolean;
   isProcessing: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<any>;
   register: (
     email: string,
     password: string,
     name: string,
     role: UserRole,
     phone?: string,
-  ) => Promise<void>;
+  ) => Promise<any>;
   logout: () => void;
   refreshUser: () => Promise<User | null>;
   clearError: () => void;
@@ -156,6 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const response = await authService.login({ email, password });
         handleSuccess(response.user);
+        return response;
       } catch (err) {
         // Use centralized API error parser when possible so UI receives
         // the server's helpful message (e.g. validation/duplicate errors)
@@ -182,6 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ...(phone && { phone }),
         });
         handleSuccess(response.user);
+        return response;
       } catch (err) {
         // Prefer the API-provided message (if available) for better UX
         const message = handleApiError(err) || getErrorMessage(err);

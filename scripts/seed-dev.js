@@ -104,7 +104,7 @@ async function registerAndVerify(email, password, role = 'ev_owner') {
   return login2.data;
 }
 
-async function createWalletAndMint(userId, amount = 100) {
+async function createWalletAndMint(userId, amount = 100, token) {
   try {
     console.log('Create wallet for', userId);
     if (opts.forceDb) {
@@ -121,15 +121,18 @@ async function createWalletAndMint(userId, amount = 100) {
       // Insert into TypeORM-created 'transaction' table. Use toWalletId for mint issuance
       runPsql(CARBON_DB_CONTAINER, CARBON_DB_USER, CARBON_DB_NAME, `INSERT INTO "transaction" ("toWalletId", type, amount) VALUES ('${walletId}', 'MINT', ${amount})`);
       console.log('Wallet and credit issuance added via DB for', userId);
+      // When running in forceDb mode we used DB operations for both create and mint,
+      // so return early to avoid trying the HTTP mint which would need an auth token.
+      return;
     } else {
-      await httpPost('/api/wallet/create', { userId });
+      await httpPost('/api/wallet/create', { userId }, token);
     }
   } catch (err) {
     console.warn('Create wallet error (may exist):', err.response?.data || err.message);
   }
   try {
     console.log('Mint', amount, 'credits to', userId);
-    await httpPost('/api/wallet/mint', { userId, amount });
+    await httpPost('/api/wallet/mint', { userId, amount }, token);
   } catch (err) {
     console.warn('Mint error:', err.response?.data || err.message);
   }
@@ -150,6 +153,28 @@ async function createListing(sellerToken, sellerId, amount = 10, price = 5) {
   return res;
 }
 
+async function createVehicle(sellerToken) {
+  // create a reasonable demo EV vehicle for the seeded owner
+  const demoVehicle = {
+    make: 'Nexa',
+    model: 'E-Trail',
+    year: 2021,
+    battery_capacity: 60, // kWh
+    license_plate: 'SEED-EV-01',
+    color: 'Blue',
+  };
+
+  try {
+    console.log('Registering demo vehicle for seeded owner');
+    const res = await httpPost('/api/vehicles', demoVehicle, sellerToken);
+    console.log('Vehicle registered (seed):', res);
+    return res;
+  } catch (err) {
+    console.warn('Vehicle seed error:', err.response?.data || err.message);
+    return null;
+  }
+}
+
 async function run() {
   try {
     const sellerEmail = opts.sellerEmail || process.env.SELLER_EMAIL || 'seed-seller@example.com';
@@ -161,13 +186,16 @@ async function run() {
     const buyer = await registerAndVerify(buyerEmail, buyerPass, 'buyer');
     console.log('Seller', seller.user.id, 'Buyer', buyer.user.id);
 
-    // Create wallets & mint credits (seller should have credits to sell)
-    await createWalletAndMint(seller.user.id, 100);
-    await createWalletAndMint(buyer.user.id, 10);
+    // Create wallets & mint credits (seller should have credits to sell) — provide auth tokens
+    await createWalletAndMint(seller.user.id, 100, seller.token);
+    await createWalletAndMint(buyer.user.id, 10, buyer.token);
 
     // Create a listing from seller
     const listing = await createListing(seller.token, seller.user.id, 10, 5);
     console.log('Listing created:', listing);
+
+    // Also create a demo vehicle for the seeded seller so UI isn't empty
+    await createVehicle(seller.token);
 
     console.log('Seed completed.');
   } catch (err) {

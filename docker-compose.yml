@@ -208,6 +208,8 @@ services:
     container_name: user-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      # Accept common local dev ports for Vite so CORS doesn't block when Vite auto-falls back to other ports
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3001
       DB_HOST: user-db
       DB_PORT: 5432
@@ -243,6 +245,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3002
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-secret123}@ev-mongodb:27017/ev_data_db?authSource=admin
       # Ensure the EV data service verifies JWTs with the same secret as the user service
       JWT_SECRET: ${JWT_SECRET:-change-this-secret}
@@ -277,6 +280,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3003
+      # Keep JWT secret consistent across services so tokens issued by user-service validate in other services
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       DB_HOST: carbon-db
       DB_PORT: 5432
       DB_NAME: carbon_credit_db
@@ -313,7 +318,9 @@ services:
     container_name: marketplace-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3004
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       DB_HOST: marketplace-db
       DB_PORT: 5432
       DB_NAME: marketplace_db
@@ -350,7 +357,9 @@ services:
     container_name: payment-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3005
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       DB_HOST: payment-db
       DB_PORT: 5432
       DB_NAME: payment_db
@@ -388,7 +397,9 @@ services:
     container_name: verification-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3006
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       DB_HOST: verification-db
       DB_PORT: 5432
       DB_NAME: verification_db
@@ -426,7 +437,9 @@ services:
     container_name: notification-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3007
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       DB_HOST: notification-db
       DB_PORT: 5432
       DB_NAME: notification_db
@@ -464,7 +477,10 @@ services:
     container_name: reporting-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      # Accept common local dev ports for Vite so CORS doesn't block when Vite auto-falls back to other ports
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8081,http://localhost:5174
       PORT: 3008
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-secret123}@reporting-mongodb:27017/reporting_db?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
