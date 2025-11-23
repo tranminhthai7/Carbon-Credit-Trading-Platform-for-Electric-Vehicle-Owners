@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { User, UserRole } from '../types';
 import { authService } from '../services/auth.service';
+import { handleApiError } from '../services/api';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface AuthContextType {
@@ -74,16 +75,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setStoredUser(currentUser);
-      setLastUpdatedAt(Date.now());
-    } else if (storedUser) {
-      setUser(storedUser);
-      setLastUpdatedAt(Date.now());
-    }
-    setLoading(false);
+    // Initialize auth state on mount.
+    // If a token is present but we don't have a parsed user in localStorage,
+    // try to fetch the current profile so pages protected by the route guard
+    // (e.g. /owner/trips) don't force a redirect when the user has a valid token.
+    (async () => {
+      try {
+        setLoading(true);
+
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+          setStoredUser(currentUser);
+          setLastUpdatedAt(Date.now());
+          return;
+        }
+
+        // No parsed user in memory, but there might still be a token saved.
+        // If we have a token we attempt to pull the profile from the API.
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const profile = await authService.getProfile();
+            // getProfile will also persist the user into localStorage
+            handleSuccess(profile);
+            return;
+          } catch (e) {
+            // If profile fetch fails we should attempt a token refresh before
+            // giving up — this handles short-lived tokens that require a refresh
+            // endpoint to mint a new token.
+            // eslint-disable-next-line no-console
+            console.debug('[AuthProvider] getProfile failed during init, attempting refresh', e);
+            try {
+              const refreshed = await authService.refresh();
+              if (refreshed && refreshed.user) {
+                handleSuccess(refreshed.user);
+                return;
+              }
+            } catch (refreshErr) {
+              // Refresh failed - we'll fall back to storedUser or treat as unauthenticated.
+              // eslint-disable-next-line no-console
+              console.debug('[AuthProvider] token refresh during init failed', refreshErr);
+            }
+          }
+        }
+
+        if (storedUser) {
+          setUser(storedUser);
+          setLastUpdatedAt(Date.now());
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
     // we only want to run this on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -113,7 +157,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const response = await authService.login({ email, password });
         handleSuccess(response.user);
       } catch (err) {
-        const message = getErrorMessage(err);
+        // Use centralized API error parser when possible so UI receives
+        // the server's helpful message (e.g. validation/duplicate errors)
+        const message = handleApiError(err) || getErrorMessage(err);
         setError(message);
         throw err;
       } finally {
@@ -137,7 +183,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
         handleSuccess(response.user);
       } catch (err) {
-        const message = getErrorMessage(err);
+        // Prefer the API-provided message (if available) for better UX
+        const message = handleApiError(err) || getErrorMessage(err);
         setError(message);
         throw err;
       } finally {
@@ -158,15 +205,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = useCallback(async () => {
     setIsProcessing(true);
     setError(null);
-    try {
-      const profile = await authService.getProfile();
-      handleSuccess(profile);
-      return profile;
-    } catch (err) {
-      const message = getErrorMessage(err);
-      setError(message);
-      return null;
-    } finally {
+      try {
+        const profile = await authService.getProfile();
+        handleSuccess(profile);
+        return profile;
+      } catch (err) {
+        const message = handleApiError(err) || getErrorMessage(err);
+        setError(message);
+        return null;
+      } finally {
       setIsProcessing(false);
     }
   }, [handleSuccess]);

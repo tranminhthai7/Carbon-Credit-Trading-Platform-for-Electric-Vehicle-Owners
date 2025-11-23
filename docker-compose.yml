@@ -236,13 +236,16 @@ services:
   # EV Data Service
   ev-data-service:
     build:
-      context: ./services/ev-data-service
-      dockerfile: Dockerfile
+      # Use repo root as build context so local "file:../.." dependencies can be resolved
+      context: .
+      dockerfile: ./services/ev-data-service/Dockerfile
     container_name: ev-data-service
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3002
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-secret123}@ev-mongodb:27017/ev_data_db?authSource=admin
+      # Ensure the EV data service verifies JWTs with the same secret as the user service
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-secret123}
