@@ -52,6 +52,54 @@ describe('addTrip controller', () => {
     expect(mockVehicle.save).toHaveBeenCalled();
   });
 
+  it('should accept start_location/end_location given as strings and coerce them', async () => {
+    const mockVehicle: any = {
+      _id: 'veh1',
+      user_id: 'user1',
+      trips: [],
+      total_distance_km: 0,
+      total_co2_saved_kg: 0,
+      save: jest.fn(async function () { return this; }),
+    };
+
+    jest.spyOn(Vehicle, 'findOne' as any).mockResolvedValue(mockVehicle);
+
+    const now = new Date();
+    const req: any = {
+      params: { id: 'veh1' },
+      body: {
+        start_time: new Date(now.getTime() - 60000).toISOString(),
+        end_time: now.toISOString(),
+        distance_km: 12.345,
+        // start_location as simple comma string, end_location as space-separated string
+        start_location: '10.5,20.5',
+        end_location: '11 21',
+        notes: 'string coords',
+        energy_consumed: 7.5,
+      },
+      user: { id: 'user1' },
+    };
+
+    const status = jest.fn().mockReturnThis();
+    const json = jest.fn();
+    const res: any = { status, json };
+
+    await addTrip(req, res);
+
+    expect(status).toHaveBeenCalledWith(201);
+    expect(json).toHaveBeenCalled();
+    const responseArg = json.mock.calls[0][0];
+    expect(responseArg.success).toBe(true);
+    // ensure location values were parsed into numeric lat/lon on the vehicle saved data
+    expect(mockVehicle.save).toHaveBeenCalled();
+    expect(mockVehicle.trips.length).toBe(1);
+    const savedTrip = mockVehicle.trips[0];
+    expect(savedTrip.start_location.latitude).toBeCloseTo(10.5);
+    expect(savedTrip.start_location.longitude).toBeCloseTo(20.5);
+    expect(savedTrip.end_location.latitude).toBeCloseTo(11);
+    expect(savedTrip.end_location.longitude).toBeCloseTo(21);
+  });
+
   it('should return 400 for negative distance', async () => {
     const mockVehicle: any = {
       _id: 'veh1',
@@ -206,6 +254,44 @@ describe('addTrip controller', () => {
     expect(responseArg.success).toBe(true);
     expect(responseArg.data.energyConsumed).toBe(4.5);
     expect(mockVehicle.save).toHaveBeenCalled();
+  });
+
+  it('should accept start_lat/start_long on the default-vehicle addTrip endpoint', async () => {
+    const mockVehicle: any = {
+      _id: 'veh1',
+      user_id: 'user1',
+      trips: [],
+      total_distance_km: 0,
+      total_co2_saved_kg: 0,
+      save: jest.fn(async function () { return this; }),
+    };
+
+    jest.spyOn(Vehicle, 'findOne' as any).mockResolvedValue(mockVehicle);
+
+    const now = new Date();
+    const req: any = {
+      body: {
+        start_time: new Date(now.getTime() - 60000).toISOString(),
+        end_time: now.toISOString(),
+        distance: 3.14,
+        // lat/long separate fields
+        start_lat: '12.5',
+        start_long: '55.25',
+      },
+      user: { id: 'user1' },
+    };
+
+    const status = jest.fn().mockReturnThis();
+    const json = jest.fn();
+    const res: any = { status, json };
+
+    await addTripToDefaultVehicle(req, res);
+
+    expect(status).toHaveBeenCalledWith(201);
+    expect(json).toHaveBeenCalled();
+    expect(mockVehicle.save).toHaveBeenCalled();
+    expect(mockVehicle.trips[0].start_location.latitude).toBeCloseTo(12.5);
+    expect(mockVehicle.trips[0].start_location.longitude).toBeCloseTo(55.25);
   });
 });
 

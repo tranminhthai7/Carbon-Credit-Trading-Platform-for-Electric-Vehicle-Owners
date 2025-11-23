@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "Carbon Credit Demo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "User: Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": { "raw": "{{base_url}}/api/users/register", "host": [ "{{base_url}}" ], "path": [ "api","users","register" ] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"demo+user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Demo User\"\n}"
+        }
+      }
+    },
+    {
+      "name": "User: Login",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": { "raw": "{{base_url}}/api/users/login", "host": [ "{{base_url}}" ], "path": [ "api","users","login" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"demo+user@example.com\",\n  \"password\": \"password123\"\n}\n" }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Save access token and Authorization header for next requests",
+              "if (pm.response.json && pm.response.json.token) {",
+              "  pm.environment.set('token', pm.response.json.token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles: Create Vehicle",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/vehicles", "host": [ "{{base_url}}" ], "path": [ "api","vehicles" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"plate_number\": \"EV-DEMO-123\",\n  \"make\": \"TestMake\",\n  \"model\": \"EV1\"\n}\n" }
+      }
+    },
+    {
+      "name": "Trips: CSV Import",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/vehicles/{{vehicleId}}/trips/import", "host": [ "{{base_url}}" ], "path": [ "api","vehicles","{{vehicleId}}","trips","import" ] },
+        "body": { "mode": "formdata", "formdata": [ { "key": "file", "type": "file", "src": "./postman/sample-trips.csv" } ] }
+      }
+    },
+    {
+      "name": "Vehicle: Generate Credits",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/vehicles/{{vehicleId}}/generate-credits", "host": [ "{{base_url}}" ], "path": [ "api","vehicles","{{vehicleId}}","generate-credits" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"start_date\": \"2023-01-01\",\n  \"end_date\": \"2023-01-31\"\n}\n" }
+      }
+    },
+    {
+      "name": "Credit Request: Create",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/credits/request", "host": [ "{{base_url}}" ], "path": [ "api","credits","request" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"vehicle_id\": \"{{vehicleId}}\",\n  \"idempotency_key\": \"req1-{{vehicleId}}-{{timestamp}}\"\n}\n" }
+      }
+    },
+    {
+      "name": "Verification: Approve",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/verification/{{verificationId}}/approve", "host": [ "{{base_url}}" ], "path": [ "api","verification","{{verificationId}}","approve" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"approved\": true\n}\n" }
+      }
+    },
+    {
+      "name": "Wallet: Issued Credits",
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/wallet/credits", "host": [ "{{base_url}}" ], "path": [ "api","wallet","credits" ] }
+      }
+    },
+    {
+      "name": "Marketplace: Create Listing",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/marketplace/listings", "host": [ "{{base_url}}" ], "path": [ "api","marketplace","listings" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"credit_id\": \"{{creditId}}\",\n  \"price\": 100\n}\n" }
+      }
+    },
+    {
+      "name": "Marketplace: Buy Listing",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/marketplace/listings/{{listingId}}/buy", "host": [ "{{base_url}}" ], "path": [ "api","marketplace","listings","{{listingId}}","buy" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"payment_method\": \"wallet\"\n}\n" }
+      }
+    },
+    {
+      "name": "Payment: Request Withdrawal",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" } ],
+        "url": { "raw": "{{base_url}}/api/payments/withdrawals", "host": [ "{{base_url}}" ], "path": [ "api","payments","withdrawals" ] },
+        "body": { "mode": "raw", "raw": "{\n  \"amount\": 100,\n  \"bank_account\": { \"account_name\": \"Demo\",\"account_number\": \"11111111\" }\n}\n" }
+      }
+    }
+  ],
+  "event": [],
+  "variable": []
+}

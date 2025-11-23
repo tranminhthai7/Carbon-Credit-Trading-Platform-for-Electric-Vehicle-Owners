@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
-import createApp from './app';
+import { createApp } from './app';
 
 // Load environment variables
 dotenv.config();

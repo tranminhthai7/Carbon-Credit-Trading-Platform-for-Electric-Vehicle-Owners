@@ -45,6 +45,50 @@ export const addTrip = async (req: Request, res: Response): Promise<void> => {
       energy_consumed: req.body.energy_consumed ?? req.body.energyConsumed ?? undefined,
     };
 
+    // Helper: convert incoming location values to { latitude:number, longitude:number, address?:string }
+    const normalizeLocation = (value: any, prefix: string): any => {
+      // If client provided explicit lat/long fields like start_lat/start_long or startLat/startLong
+      const latCandidates = [`${prefix}_lat`, `${prefix}Lat`, 'lat', 'latitude'];
+      const lonCandidates = [`${prefix}_long`, `${prefix}Long`, 'lon', 'lng', 'longitude'];
+      for (const latKey of latCandidates) {
+        for (const lonKey of lonCandidates) {
+          if (latKey in req.body && lonKey in req.body) {
+            return { latitude: Number(req.body[latKey]), longitude: Number(req.body[lonKey]) };
+          }
+        }
+      }
+
+      // If value is a string try parsing JSON or coordinate strings like `"10,20"` or "10 20"
+      if (typeof value === 'string') {
+        // try JSON
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {
+          // not JSON, try simple coords
+        }
+        const coordMatch = value.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+        if (coordMatch) {
+          return { latitude: Number(coordMatch[1]), longitude: Number(coordMatch[2]) };
+        }
+        return undefined;
+      }
+
+      // If object, coerce string numbers to actual numbers
+      if (value && typeof value === 'object') {
+        const out: any = { ...value };
+        if (out.latitude && typeof out.latitude === 'string') out.latitude = Number(out.latitude);
+        if (out.longitude && typeof out.longitude === 'string') out.longitude = Number(out.longitude);
+        return out;
+      }
+
+      return undefined;
+    };
+
+    // Apply normalization (if provided as a string or separate lat/long fields)
+    normalized.start_location = normalizeLocation(normalized.start_location, 'start');
+    normalized.end_location = normalizeLocation(normalized.end_location, 'end');
+
     // Validate request body
     const { error, value } = addTripSchema.validate(normalized, {
       abortEarly: false,
@@ -366,6 +410,37 @@ export const addTripToDefaultVehicle = async (req: Request, res: Response): Prom
       notes: req.body.notes ?? req.body.note ?? undefined,
       energy_consumed: req.body.energy_consumed ?? req.body.energyConsumed ?? undefined,
     };
+    // Apply same normalization as addTrip
+    const normalizeLocation = (value: any, prefix: string): any => {
+      const latCandidates = [`${prefix}_lat`, `${prefix}Lat`, 'lat', 'latitude'];
+      const lonCandidates = [`${prefix}_long`, `${prefix}Long`, 'lon', 'lng', 'longitude'];
+      for (const latKey of latCandidates) {
+        for (const lonKey of lonCandidates) {
+          if (latKey in req.body && lonKey in req.body) {
+            return { latitude: Number(req.body[latKey]), longitude: Number(req.body[lonKey]) };
+          }
+        }
+      }
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) {}
+        const coordMatch = value.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+        if (coordMatch) return { latitude: Number(coordMatch[1]), longitude: Number(coordMatch[2]) };
+        return undefined;
+      }
+      if (value && typeof value === 'object') {
+        const out: any = { ...value };
+        if (out.latitude && typeof out.latitude === 'string') out.latitude = Number(out.latitude);
+        if (out.longitude && typeof out.longitude === 'string') out.longitude = Number(out.longitude);
+        return out;
+      }
+      return undefined;
+    };
+
+    normalized.start_location = normalizeLocation(normalized.start_location, 'start');
+    normalized.end_location = normalizeLocation(normalized.end_location, 'end');
     const { error, value } = addTripSchema.validate(normalized, { abortEarly: false });
     if (error) {
       res.status(400).json({ success: false, message: 'Validation failed', errors: error.details.map((d:any) => ({ field: d.path.join('.'), message: d.message })) });

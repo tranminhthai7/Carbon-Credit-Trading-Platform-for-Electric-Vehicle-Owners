@@ -1,0 +1,36 @@
+{
+  "listingId": "27047595-21ac-4792-9045-dc5e1d1903f0",
+  "listingStatus": "SOLD",
+  "orders": [
+    {
+      "id": "a6584f74-82d2-4a22-810b-c2c41418d53c",
+      "buyerId": "b7972e08-d1a1-4ec3-9910-f9e641b49374",
+      "sellerId": "a211322e-ef4a-4b92-a49c-b471b827bcaf",
+      "amount": 10,
+      "totalPrice": 50,
+      "status": "PENDING",
+      "createdAt": "2025-11-20T00:35:02.731Z",
+      "listing": {
+        "id": "27047595-21ac-4792-9045-dc5e1d1903f0",
+        "userId": "a211322e-ef4a-4b92-a49c-b471b827bcaf",
+        "amount": 10,
+        "pricePerCredit": 5,
+        "status": "SOLD",
+        "createdAt": "2025-11-20T00:35:02.630Z"
+      }
+    }
+  ],
+  "sellerWalletBefore": null,
+  "sellerWalletAfter": {
+    "id": "739875ea-1fc3-47f1-9029-a06e2e67579b",
+    "userId": "a211322e-ef4a-4b92-a49c-b471b827bcaf",
+    "balance": 90
+  },
+  "buyerWalletBefore": null,
+  "buyerWalletAfter": {
+    "id": "14ed719a-55a2-43ec-8ca4-1b4336cd631a",
+    "userId": "b7972e08-d1a1-4ec3-9910-f9e641b49374",
+    "balance": 20
+  },
+  "passed": true
+}
