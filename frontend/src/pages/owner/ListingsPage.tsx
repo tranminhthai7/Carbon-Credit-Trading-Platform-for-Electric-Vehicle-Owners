@@ -19,6 +19,7 @@ import {
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Add, Cancel, Edit } from '@mui/icons-material';
 import { marketplaceService } from '../../services/marketplace.service';
+import { aiService } from '../../services/ai.service';
 import { Listing } from '../../types';
 import { format } from 'date-fns';
 
@@ -38,6 +39,7 @@ export const ListingsPage: React.FC = () => {
     quantity: '',
     pricePerUnit: '',
   });
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     fetchListings();
@@ -58,6 +60,24 @@ export const ListingsPage: React.FC = () => {
     setIsEditMode(false);
     setFormData({ quantity: '', pricePerUnit: '' });
     setOpenDialog(true);
+  };
+
+  const handleGetAISuggestion = async () => {
+    if (!formData.quantity) {
+      setSnackbar({ open: true, message: 'Please enter quantity first', severity: 'error' });
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const suggestion = await aiService.suggestPrice(Number(formData.quantity));
+      setFormData(prev => ({ ...prev, pricePerUnit: suggestion.suggested_price_per_credit.toString() }));
+      setSnackbar({ open: true, message: `AI suggests ${suggestion.suggested_price_per_credit} per credit`, severity: 'success' });
+    } catch (error) {
+      console.error('Failed to get AI suggestion:', error);
+      setSnackbar({ open: true, message: 'Failed to get AI price suggestion', severity: 'error' });
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleOpenEditDialog = (listing: Listing) => {
@@ -269,6 +289,16 @@ export const ListingsPage: React.FC = () => {
                 : ''
             }
           />
+          {!isEditMode && (
+            <Button
+              onClick={handleGetAISuggestion}
+              disabled={!formData.quantity || aiLoading}
+              sx={{ mt: 1 }}
+              variant="outlined"
+            >
+              {aiLoading ? 'Getting AI Suggestion...' : 'Get AI Price Suggestion'}
+            </Button>
+          )}
           {formData.quantity && formData.pricePerUnit && (
             <Typography variant="h6" sx={{ mt: 2 }} color="primary">
               Total: ${(Number(formData.quantity) * Number(formData.pricePerUnit)).toFixed(2)}

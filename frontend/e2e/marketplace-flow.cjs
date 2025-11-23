@@ -78,6 +78,11 @@ async function getWallet(userId) {
   return res.data;
 }
 
+async function mintCredits(token, userId, amount) {
+  const res = await axios.post(`${gatewayUrl}/api/credits/wallet/mint`, { userId, amount }, { headers: { Authorization: `Bearer ${token}` } });
+  return res.data;
+}
+
 async function main() {
   try {
     console.log('Starting marketplace E2E flow...');
@@ -97,6 +102,10 @@ async function main() {
     const sellerId = sellerData.user.id;
     const buyerId = buyerData.user.id;
     console.log('sellerId', sellerId, 'buyerId', buyerId);
+
+    // Mint credits for seller
+    console.log('Minting credits for seller');
+    await mintCredits(sellerToken, sellerId, 100);
 
     // Optional: check initial wallets
     const sellerWalletBefore = await getWallet(sellerId)

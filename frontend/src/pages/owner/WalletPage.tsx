@@ -154,7 +154,7 @@ export const WalletPage: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h3" fontWeight="bold" color="white">
-                ${wallet?.balance.toFixed(2) || '0.00'}
+                ${(wallet?.balance ?? 0).toFixed(2)}
               </Typography>
             </CardContent>
           </Card>
@@ -166,9 +166,9 @@ export const WalletPage: React.FC = () => {
               <Typography color="text.secondary" gutterBottom>
                 Total Earned
               </Typography>
-              <Typography variant="h4" fontWeight="bold" color="success.main">
-                ${wallet?.totalEarned.toFixed(2) || '0.00'}
-              </Typography>
+                <Typography variant="h4" fontWeight="bold" color="success.main">
+                ${(wallet?.totalEarned ?? 0).toFixed(2)}
+                </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -179,9 +179,9 @@ export const WalletPage: React.FC = () => {
               <Typography color="text.secondary" gutterBottom>
                 Total Spent
               </Typography>
-              <Typography variant="h4" fontWeight="bold" color="error.main">
-                ${wallet?.totalSpent.toFixed(2) || '0.00'}
-              </Typography>
+                <Typography variant="h4" fontWeight="bold" color="error.main">
+                ${(wallet?.totalSpent ?? 0).toFixed(2)}
+                </Typography>
             </CardContent>
           </Card>
         </Grid>

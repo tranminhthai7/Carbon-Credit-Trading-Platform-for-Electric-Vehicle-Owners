@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from "typeorm";
-import { Listing } from "./Listing";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
 
 @Entity()
 export class Order {
@@ -8,6 +7,7 @@ export class Order {
 
   @Column()
   buyerId!: string;
+
 
   @Column()
   sellerId!: string;
@@ -21,8 +21,9 @@ export class Order {
   @Column({ default: "PENDING" })
   status!: "PENDING" | "COMPLETED" | "CANCELLED";
 
-  @ManyToOne(() => Listing)
-  listing!: Listing;
+  // store listing id rather than entity relation to avoid metadata bootstrap
+  @Column()
+  listingId!: string;
 
   @CreateDateColumn()
   createdAt!: Date;

@@ -1,10 +1,16 @@
 //listingService.ts
-import { Listing } from "../entities/Listing";
-import * as apiClient from "../utils/apiClient";
-import * as orderService from "./orderService";
-import { AppDataSource } from "../data-source";
+console.log("listingService loaded");
 
-const listingRepo = () => AppDataSource.getRepository(Listing);
+import { transferCredits } from "../utils/apiClient";
+import { createOrder } from "./orderService";
+import { AppDataSource } from "../db";
+import { Listing } from "../entities/Listing";
+
+console.log("AppDataSource imported:", !!AppDataSource);
+
+export const test = () => "test";
+
+const listingRepo = () => AppDataSource.getRepository('Listing' as any);
 
 export async function createListing(userId: string, amount: number, pricePerCredit: number) {
   const repo = listingRepo();
@@ -22,6 +28,11 @@ export async function getListingById(listingId: string) {
   return repo.findOneBy({ id: listingId });
 }
 
+export async function getUserListings(userId: string) {
+  const repo = listingRepo();
+  return repo.find({ where: { userId } });
+}
+
 export async function buyListing(listingId: string, buyerId: string) {
   const repo = listingRepo();
   const listing = await repo.findOneBy({ id: listingId });
@@ -30,7 +41,7 @@ export async function buyListing(listingId: string, buyerId: string) {
   if (listing.status === "SOLD") throw new Error("Already sold");
 
   // Transfer credits first
-  const transferResult: any = await apiClient.transferCredits(listing.userId, buyerId, listing.amount);
+  const transferResult: any = await transferCredits(listing.userId, buyerId, listing.amount);
   if (!transferResult || transferResult.status < 200 || transferResult.status >= 300 || transferResult.data?.success === false) {
     throw new Error((transferResult && (transferResult.data?.message || transferResult.statusText)) || "Transfer failed");
   }
@@ -40,12 +51,12 @@ export async function buyListing(listingId: string, buyerId: string) {
     listing.status = "SOLD";
     await manager.save(listing);
 
-    const order = await orderService.createOrder(
+    const order = await createOrder(
       buyerId,
       listing.userId,
       listing.amount,
       listing.pricePerCredit,
-      listing,
+      listing.id,
       manager
     );
 
@@ -54,4 +65,6 @@ export async function buyListing(listingId: string, buyerId: string) {
 
   return result;
 }
+
+export const testFunction = () => "test";
 

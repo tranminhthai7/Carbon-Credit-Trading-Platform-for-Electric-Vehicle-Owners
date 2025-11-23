@@ -47,7 +47,7 @@ export const marketplaceService = {
 
   // Get user's orders (for buyers)
   getMyOrders: async (): Promise<Order[]> => {
-    const response = await apiClient.get<Order[]>('/api/listings/orders');
+    const response = await apiClient.get<Order[]>('/api/orders');
     return response.data;
   },
 };

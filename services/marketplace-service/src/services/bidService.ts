@@ -1,12 +1,12 @@
 //bidService.ts
-import { AppDataSource } from "../data-source";
+import { AppDataSource } from "../db";
 import { Bid } from "../entities/Bid";
 import { Listing } from "../entities/Listing";
 import * as orderService from "./orderService";
 import * as apiClient from "../utils/apiClient";
 
-const bidRepo = () => AppDataSource.getRepository(Bid);
-const listingRepo = () => AppDataSource.getRepository(Listing);
+const bidRepo = () => AppDataSource.getRepository('Bid' as any);
+const listingRepo = () => AppDataSource.getRepository('Listing' as any);
 
 export async function placeBid(listingId: string, bidderId: string, amount: number) {
   const listing = await listingRepo().findOneBy({ id: listingId });
@@ -14,24 +14,26 @@ export async function placeBid(listingId: string, bidderId: string, amount: numb
   if (listing.status === "SOLD") throw new Error("Listing already sold");
 
   const repo = bidRepo();
-  const bid = repo.create({ listing, bidderId, amount });
+  const bid = repo.create({ listingId, bidderId, amount });
   return repo.save(bid);
 }
 
 export async function getBidsForListing(listingId: string) {
   return bidRepo().find({
-    where: { listing: { id: listingId } },
+    where: { listingId },
     order: { amount: "DESC" },
   });
 }
 
 export async function closeAuction(listingId: string) {
-  const listing = await listingRepo().findOne({ where: { id: listingId }, relations: ["bids"] });
+  const listing = await listingRepo().findOneBy({ id: listingId });
   if (!listing) throw new Error("Listing not found");
-  if (listing.bids.length === 0) throw new Error("No bids placed");
+
+  const bids = await getBidsForListing(listingId);
+  if (bids.length === 0) throw new Error("No bids placed");
 
   // lấy bid cao nhất
-  const highestBid = listing.bids.sort((a, b) => b.amount - a.amount)[0];
+  const highestBid = bids.sort((a, b) => b.amount - a.amount)[0];
 
   // chuyển credits cho người thắng
   await apiClient.transferCredits(listing.userId, highestBid.bidderId, listing.amount);
@@ -46,7 +48,7 @@ export async function closeAuction(listingId: string) {
     listing.userId,
     listing.amount,
     highestBid.amount,
-    listing
+    listing.id
   );
 
   return { winner: highestBid, order };

@@ -8,6 +8,7 @@ export interface ITrip {
   end_time: Date;
   distance_km: number;
   co2_saved_kg: number;
+  energy_consumed?: number;
   start_location?: {
     latitude: number;
     longitude: number;
@@ -57,6 +58,10 @@ export const tripSchema = new Schema<ITrip>(
       type: Number,
       required: [true, 'CO2 saved is required'],
       min: [0, 'CO2 saved cannot be negative'],
+    },
+    energy_consumed: {
+      type: Number,
+      min: [0, 'Energy consumed cannot be negative'],
     },
     start_location: {
       latitude: {

@@ -10,6 +10,7 @@
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "strictPropertyInitialization": false,
+    "noEmitOnError": false,
     "types": ["node", "jest"]
   }
   ,

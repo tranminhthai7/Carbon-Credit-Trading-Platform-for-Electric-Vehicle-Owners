@@ -1,11 +1,9 @@
-import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { config } from "dotenv";
-import { Listing } from "./entities/Listing";
-import { Order } from "./entities/Order";
-import { Bid } from "./entities/Bid";
 
 config();
+
+let entities: any[] = [];
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -16,6 +14,26 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "secret123",
   database: process.env.DB_NAME || process.env.POSTGRES_NAME || "marketplace_db",
   synchronize: true, // tự động sync DB khi chạy dev
-  logging: false,
-  entities: [Listing, Order, Bid],
+  logging: true,
+  entities: entities,
 });
+
+// Initialize entities dynamically
+export async function initializeDataSource() {
+  try {
+    const { Listing } = await import("./entities/Listing");
+    const { Order } = await import("./entities/Order");
+    const { Bid } = await import("./entities/Bid");
+
+    entities = [Listing, Order, Bid];
+    AppDataSource.setOptions({
+      ...AppDataSource.options,
+      entities: entities,
+    });
+
+    await AppDataSource.initialize();
+  } catch (error) {
+    console.error("Error initializing data source:", error);
+    throw error;
+  }
+}

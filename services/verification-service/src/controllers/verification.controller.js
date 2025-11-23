@@ -46,6 +46,42 @@ class VerificationController {
                 });
             }
         };
+
+        // Dashboard helpers (instance-bound so `this` resolves correctly when used as route handlers)
+        this.getStats = async (req, res) => {
+            try {
+                const total = await this.verificationRepository.count();
+                const approved = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.APPROVED } });
+                const rejected = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.REJECTED } });
+                const pending = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.PENDING } });
+
+                res.set('Cache-Control', 'no-cache');
+                res.json({
+                    total,
+                    approved,
+                    rejected,
+                    pending
+                });
+            } catch (error) {
+                console.error('Get stats error:', error);
+                res.status(500).json({ success: false, message: 'Failed to get verification statistics' });
+            }
+        };
+
+        this.getRecentActivities = async (req, res) => {
+            try {
+                const recentVerifications = await this.verificationRepository.find({
+                    order: { updated_at: 'DESC' },
+                    take: 10
+                });
+
+                res.set('Cache-Control', 'no-cache');
+                res.json(recentVerifications);
+            } catch (error) {
+                console.error('Get recent activities error:', error);
+                res.status(500).json({ success: false, message: 'Failed to get recent verification activities' });
+            }
+        };
         // Duyệt verification và cấp credits
         this.approveVerification = async (req, res) => {
             try {
@@ -583,3 +619,9 @@ class VerificationController {
     }
 }
 exports.VerificationController = VerificationController;
+
+// Ensure runtime compatibility when .js artifacts are loaded directly
+// (some environments load .js instead of .ts). Add missing prototype methods
+// that are present in the TypeScript source so routes referencing them
+// aren't undefined during startup.
+// Prototype fallbacks removed — methods are provided on the instance to preserve `this`.

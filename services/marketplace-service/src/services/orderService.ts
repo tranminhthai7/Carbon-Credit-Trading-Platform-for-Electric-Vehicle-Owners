@@ -1,15 +1,15 @@
 //orderService.ts
-import { AppDataSource } from "../data-source";
+import { AppDataSource } from "../db";
 import { publishEvent } from "../config/mq";
 import { Order } from "../entities/Order";
 import { Listing } from "../entities/Listing";
 
-const orderRepo = () => AppDataSource.getRepository(Order);
+const orderRepo = () => AppDataSource.getRepository('Order' as any);
 
-export async function createOrder(buyerId: string, sellerId: string, amount: number, pricePerCredit: number, listing: Listing | Partial<Listing>, manager?: any) {
-  const repo = manager ? manager.getRepository(Order) : orderRepo();
+export async function createOrder(buyerId: string, sellerId: string, amount: number, pricePerCredit: number, listingId: string, manager?: any) {
+  const repo = manager ? manager.getRepository('Order' as any) : orderRepo();
   const totalPrice = amount * pricePerCredit;
-  const order = repo.create({ buyerId, sellerId, amount, totalPrice, listing, status: "PENDING" });
+  const order = repo.create({ buyerId, sellerId, amount, totalPrice, listingId, status: "PENDING" });
   const saved = await repo.save(order);
   // Publish order.created event to MQ (best-effort)
   try {
@@ -22,7 +22,7 @@ export async function createOrder(buyerId: string, sellerId: string, amount: num
 
 export async function getAllOrders() {
   const repo = orderRepo();
-  return repo.find({ relations: ["listing"] });
+  return repo.find();
 }
 
 export async function updateOrderStatus(orderId: string, status: "COMPLETED" | "CANCELLED") {

@@ -1,11 +1,11 @@
 import { apiClient } from './api';
-import { Verification } from '../types';
+import { Verification, Certificate } from '../types';
 
 export const verificationService = {
   // Get all pending verifications (for CVA)
   getPendingVerifications: async (): Promise<Verification[]> => {
-    const response = await apiClient.get<Verification[]>('/api/verifications/pending');
-    return response.data;
+    const response = await apiClient.get('/api/verifications/pending');
+    return response.data.data.verifications;
   },
 
   // Get all verifications by verifier
@@ -15,17 +15,21 @@ export const verificationService = {
   },
 
   // Approve a verification
-  approveVerification: async (verificationId: string, comments?: string): Promise<Verification> => {
-    const response = await apiClient.post<Verification>(`/api/verifications/${verificationId}/approve`, {
-      comments,
+  approveVerification: async (verificationId: string, cvaId: string, comments?: string): Promise<Verification> => {
+    const response = await apiClient.post<Verification>('/api/verifications/approve', {
+      verification_id: verificationId,
+      cva_id: cvaId,
+      notes: comments,
     });
     return response.data;
   },
 
   // Reject a verification
-  rejectVerification: async (verificationId: string, comments: string): Promise<Verification> => {
-    const response = await apiClient.post<Verification>(`/api/verifications/${verificationId}/reject`, {
-      comments,
+  rejectVerification: async (verificationId: string, cvaId: string, comments: string): Promise<Verification> => {
+    const response = await apiClient.post<Verification>('/api/verifications/reject', {
+      verification_id: verificationId,
+      cva_id: cvaId,
+      notes: comments,
     });
     return response.data;
   },
@@ -39,6 +43,12 @@ export const verificationService = {
   // Get recent verification activities
   getRecentActivities: async (): Promise<Verification[]> => {
     const response = await apiClient.get<Verification[]>('/api/verifications/recent');
+    return response.data;
+  },
+
+  // Get user's certificates
+  getMyCertificates: async (): Promise<Certificate[]> => {
+    const response = await apiClient.get<Certificate[]>('/api/verifications/certificates');
     return response.data;
   },
 };

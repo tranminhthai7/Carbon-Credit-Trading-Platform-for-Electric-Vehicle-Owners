@@ -1,14 +1,20 @@
 //listingController.ts
+console.log("listingController loaded");
 import { Request, Response } from "express";
 import * as listingService from "../services/listingService";
+console.log("listingService imported successfully");
 
 export async function createListingHandler(req: Request, res: Response) {
   try {
-    const { userId, amount, pricePerCredit } = req.body;
-    if (!userId || !amount || !pricePerCredit) {
-      return res.status(400).json({ error: "userId, amount, pricePerCredit required" });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
     }
-    const listing = await listingService.createListing(userId, amount, pricePerCredit);
+    const { quantity, pricePerUnit } = req.body;
+    if (!quantity || !pricePerUnit) {
+      return res.status(400).json({ error: "quantity, pricePerUnit required" });
+    }
+    const listing = await listingService.createListing(userId, quantity, pricePerUnit);
     res.json(listing);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -35,6 +41,24 @@ export async function getListingByIdHandler(req: Request, res: Response) {
     res.json(listing);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
+  }
+}
+
+export async function getMyListingsHandler(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    console.log("getMyListingsHandler called with userId:", userId);
+    console.log("listingService keys:", Object.keys(listingService));
+    console.log("has getUserListings:", typeof listingService.getUserListings);
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    const listings = await listingService.getUserListings(userId);
+    res.json(listings);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Error in getMyListingsHandler:", err);
     res.status(500).json({ error: message });
   }
 }

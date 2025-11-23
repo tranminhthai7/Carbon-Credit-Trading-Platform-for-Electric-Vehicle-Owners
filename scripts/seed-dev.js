@@ -44,6 +44,9 @@ const CARBON_DB_NAME = process.env.CARBON_DB_NAME || 'carbon_credit_db';
 const MARKETPLACE_DB_CONTAINER = process.env.MARKETPLACE_DB_CONTAINER || 'marketplace-db';
 const MARKETPLACE_DB_USER = process.env.MARKETPLACE_DB_USER || 'admin';
 const MARKETPLACE_DB_NAME = process.env.MARKETPLACE_DB_NAME || 'marketplace_db';
+const VERIFICATION_DB_CONTAINER = process.env.VERIFICATION_DB_CONTAINER || 'verification-db';
+const VERIFICATION_DB_USER = process.env.VERIFICATION_DB_USER || 'admin';
+const VERIFICATION_DB_NAME = process.env.VERIFICATION_DB_NAME || 'verification_db';
 for (let i = 0; i < rawArgs.length; i++) {
   if (rawArgs[i] === '--seller-email' && rawArgs[i + 1]) { opts.sellerEmail = rawArgs[i + 1]; i++; }
   if (rawArgs[i] === '--buyer-email' && rawArgs[i + 1]) { opts.buyerEmail = rawArgs[i + 1]; i++; }
@@ -175,6 +178,19 @@ async function createVehicle(sellerToken) {
   }
 }
 
+async function createVerification(userId, vehicleId) {
+  if (opts.forceDb) {
+    // create verification via DB
+    const sql = `INSERT INTO verifications (user_id, vehicle_id, co2_amount, trips_count, status, emission_data, trip_details) VALUES ('${userId}', '${vehicleId}', 25.5, 10, 'pending', '{"co2_saved": 25.5}', '{"trips": 10}') RETURNING id;`;
+    const out = runPsql(VERIFICATION_DB_CONTAINER, VERIFICATION_DB_USER, VERIFICATION_DB_NAME, sql, true);
+    const id = parseIdFromPsql(out);
+    console.log('Inserted verification via DB for user', userId, 'id:', id);
+    return { id, output: out };
+  }
+  // If not forceDb, we could use HTTP, but for now, only DB mode
+  console.log('Skipping verification creation (not in forceDb mode)');
+}
+
 async function run() {
   try {
     const sellerEmail = opts.sellerEmail || process.env.SELLER_EMAIL || 'seed-seller@example.com';
@@ -184,7 +200,8 @@ async function run() {
 
     const seller = await registerAndVerify(sellerEmail, sellerPass, 'ev_owner');
     const buyer = await registerAndVerify(buyerEmail, buyerPass, 'buyer');
-    console.log('Seller', seller.user.id, 'Buyer', buyer.user.id);
+    const admin = await registerAndVerify('admin@local.test', 'Admin123!', 'admin');
+    console.log('Seller', seller.user.id, 'Buyer', buyer.user.id, 'Admin', admin.user.id);
 
     // Create wallets & mint credits (seller should have credits to sell) — provide auth tokens
     await createWalletAndMint(seller.user.id, 100, seller.token);
@@ -195,7 +212,11 @@ async function run() {
     console.log('Listing created:', listing);
 
     // Also create a demo vehicle for the seeded seller so UI isn't empty
-    await createVehicle(seller.token);
+    const vehicle = await createVehicle(seller.token);
+    if (vehicle && vehicle.data && vehicle.data.id) {
+      // Create a pending verification for the vehicle
+      await createVerification(seller.user.id, vehicle.data.id);
+    }
 
     console.log('Seed completed.');
   } catch (err) {

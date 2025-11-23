@@ -16,6 +16,8 @@ const verificationController = new VerificationController();
 
 // CVA Verification Management (requires CVA role)
 router.get('/pending', authMiddleware, requireRole(['cva']), verificationController.getPendingVerifications);
+router.get('/stats', authMiddleware, requireRole(['cva']), verificationController.getStats);
+router.get('/recent', authMiddleware, requireRole(['cva']), verificationController.getRecentActivities);
 router.post('/approve', authMiddleware, requireRole(['cva']), validateApproval, verificationController.approveVerification);
 router.post('/reject', authMiddleware, requireRole(['cva']), validateRejection, verificationController.rejectVerification);
 

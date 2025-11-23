@@ -54,7 +54,7 @@ export interface Trip {
   startTime: string;
   endTime: string;
   distance: number;
-  energyConsumed: number;
+  energyConsumed: number | null;
   carbonSaved: number;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   createdAt: string;

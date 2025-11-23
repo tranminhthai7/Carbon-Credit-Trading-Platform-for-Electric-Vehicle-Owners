@@ -169,7 +169,7 @@ app.use('/api/payments', createProxyMiddleware(createProxyOptions(services.payme
 app.use('/api/transactions', createProxyMiddleware(createProxyOptions(services.payment, '/transactions')));
 
 // Route: Verification Service (CVA, KYC, Certificates)
-app.use('/api/verification', createProxyMiddleware(createProxyOptions(services.verification, '/verification', { preserveOriginalPath: true })));
+app.use('/api/verifications', createProxyMiddleware(createProxyOptions(services.verification, '/verifications', { preserveOriginalPath: true })));
 app.use('/api/kyc', createProxyMiddleware(createProxyOptions(services.verification, '/kyc')));
 app.use('/api/certificates', createProxyMiddleware(createProxyOptions(services.verification, '/certificates')));
 app.use('/api/issuances', createProxyMiddleware(createProxyOptions(services.verification, '/issuances')));

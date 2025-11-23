@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from "typeorm";
-import { Listing } from "./Listing";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
 
 @Entity()
 export class Bid {
@@ -9,11 +8,11 @@ export class Bid {
   @Column()
   bidderId!: string;
 
+  @Column()
+  listingId!: string;
+
   @Column("double precision")
   amount!: number; // số tiền đấu giá (USD/credit)
-
-  @ManyToOne(() => Listing, (listing) => listing.bids)
-  listing!: Listing;
 
   @CreateDateColumn()
   createdAt!: Date;

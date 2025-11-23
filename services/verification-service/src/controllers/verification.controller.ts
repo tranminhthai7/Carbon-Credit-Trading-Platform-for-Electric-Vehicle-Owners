@@ -642,4 +642,45 @@ export class VerificationController {
             });
         }
     };
+
+    // Get verification statistics for dashboard
+    getStats = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const total = await this.verificationRepository.count();
+            const approved = await this.verificationRepository.count({ where: { status: VerificationStatus.APPROVED } });
+            const rejected = await this.verificationRepository.count({ where: { status: VerificationStatus.REJECTED } });
+            const pending = await this.verificationRepository.count({ where: { status: VerificationStatus.PENDING } });
+
+            res.json({
+                total,
+                approved,
+                rejected,
+                pending
+            });
+        } catch (error) {
+            console.error('Get stats error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get verification statistics'
+            });
+        }
+    }
+
+    // Get recent verification activities
+    getRecentActivities = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const recentVerifications = await this.verificationRepository.find({
+                order: { updated_at: 'DESC' },
+                take: 10
+            });
+
+            res.json(recentVerifications);
+        } catch (error) {
+            console.error('Get recent activities error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get recent verification activities'
+            });
+        }
+    }
 }

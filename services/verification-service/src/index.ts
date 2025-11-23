@@ -26,7 +26,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/verification', verificationRoutes);
+app.use('/api/verifications', verificationRoutes);
 
 // Health check
 app.get('/health', (_req: Request, res: Response) => {

@@ -18,8 +18,10 @@ import { CheckCircle, Cancel } from '@mui/icons-material';
 import { verificationService } from '../../services/verification.service';
 import { Verification } from '../../types';
 import { format } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 
 export const VerificationsPage: React.FC = () => {
+  const { user } = useAuth();
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
@@ -42,12 +44,12 @@ export const VerificationsPage: React.FC = () => {
   };
 
   const handleAction = async () => {
-    if (!selectedVerification || !action) return;
+    if (!selectedVerification || !action || !user) return;
     try {
       if (action === 'approve') {
-        await verificationService.approveVerification(selectedVerification.id, comments);
+        await verificationService.approveVerification(selectedVerification.id, user.id, comments);
       } else {
-        await verificationService.rejectVerification(selectedVerification.id, comments);
+        await verificationService.rejectVerification(selectedVerification.id, user.id, comments);
       }
       setSelectedVerification(null);
       setComments('');
@@ -60,15 +62,23 @@ export const VerificationsPage: React.FC = () => {
 
   const columns: GridColDef[] = [
     {
-      field: 'tripId',
+      field: 'id',
       headerName: 'Trip ID',
       width: 200,
+      valueGetter: (params: any) => params.row.id.substring(0, 8) + '...',
     },
     {
-      field: 'createdAt',
+      field: 'created_at',
       headerName: 'Submitted',
       width: 180,
-      valueGetter: (params: any) => format(new Date(params.row.createdAt), 'MMM dd, yyyy HH:mm'),
+      valueGetter: (params: any) => {
+        try {
+          return format(new Date(params.row.created_at), 'MMM dd, yyyy HH:mm');
+        } catch (error) {
+          console.error('Invalid date:', params.row.created_at);
+          return 'Invalid date';
+        }
+      },
     },
     {
       field: 'status',
@@ -77,12 +87,12 @@ export const VerificationsPage: React.FC = () => {
       renderCell: (params: any) => {
         const status = params.value as string;
         const color =
-          status === 'APPROVED'
+          status === 'approved'
             ? 'success'
-            : status === 'PENDING'
+            : status === 'pending'
             ? 'warning'
             : 'error';
-        return <Chip label={status} color={color} size="small" />;
+        return <Chip label={status.toUpperCase()} color={color} size="small" />;
       },
     },
     {
@@ -90,7 +100,7 @@ export const VerificationsPage: React.FC = () => {
       headerName: 'Actions',
       width: 250,
       renderCell: (params: any) => {
-        if (params.row.status === 'PENDING') {
+        if (params.row.status === 'pending') {
           return (
             <Box display="flex" gap={1}>
               <Button
@@ -183,6 +193,8 @@ export const VerificationsPage: React.FC = () => {
             onChange={(e: any) => setComments(e.target.value)}
             margin="normal"
             required={action === 'reject'}
+            helperText={action === 'reject' ? 'Required (minimum 10 characters)' : 'Optional'}
+            error={action === 'reject' && comments.length > 0 && comments.length < 10}
           />
         </DialogContent>
         <DialogActions>
@@ -191,7 +203,7 @@ export const VerificationsPage: React.FC = () => {
             onClick={handleAction}
             variant="contained"
             color={action === 'approve' ? 'success' : 'error'}
-            disabled={action === 'reject' && !comments}
+            disabled={action === 'reject' && (!comments || comments.length < 10)}
           >
             Confirm
           </Button>

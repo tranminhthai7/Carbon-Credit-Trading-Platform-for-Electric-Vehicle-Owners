@@ -25,17 +25,15 @@ export const DevLogin: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleManual = async () => {
+  const handleAdminLogin = async () => {
     try {
-      // For convenience, call backend to get an access token for a pre-created test user
-      const response = await authService.login({ email: 'dev@local.test', password: 'Testpass123!' });
+      const response = await authService.login({ email: 'admin@local.test', password: 'Admin123!' });
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
-      // redirect to owner's dashboard by default
       navigate(getDashboardPathForRole(response.user.role));
     } catch (err) {
-      console.error('Dev manual login failed', err);
-      alert('Dev auto login failed. Please login manually.');
+      console.error('Admin login failed', err);
+      alert('Admin login failed. Check if seed ran.');
     }
   };
 
@@ -48,8 +46,8 @@ export const DevLogin: React.FC = () => {
         This page helps you quickly sign into a local dev account. Use the `token` and `user` query parameters
         to auto-login, e.g. /dev-login?token=&lt;token&gt;&user=&lt;encodedUser&gt;
       </Typography>
-      <Button variant="contained" onClick={handleManual}>
-        Auto Login (dev@local.test)
+      <Button variant="contained" onClick={handleAdminLogin} sx={{ ml: 2 }}>
+        Auto Login Admin
       </Button>
     </Box>
   );

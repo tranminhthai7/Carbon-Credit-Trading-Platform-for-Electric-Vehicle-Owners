@@ -53,7 +53,13 @@ export const TripsPage: React.FC = () => {
       field: 'startTime',
       headerName: 'Date',
       width: 150,
-      valueGetter: (params) => format(new Date(params.row.startTime), 'MMM dd, yyyy'),
+      valueGetter: (params) => {
+        try {
+          return format(new Date(params.row.startTime), 'MMM dd, yyyy');
+        } catch {
+          return 'Invalid Date';
+        }
+      },
     },
     {
       field: 'distance',
@@ -65,7 +71,7 @@ export const TripsPage: React.FC = () => {
       field: 'energyConsumed',
       headerName: 'Energy (kWh)',
       width: 130,
-      type: 'number',
+      valueGetter: (params) => params.row.energyConsumed?.toString() || '-',
     },
     {
       field: 'carbonSaved',
@@ -93,7 +99,13 @@ export const TripsPage: React.FC = () => {
       field: 'createdAt',
       headerName: 'Created',
       width: 150,
-      valueGetter: (params) => format(new Date(params.row.createdAt), 'MMM dd, HH:mm'),
+      valueGetter: (params) => {
+        try {
+          return format(new Date(params.row.createdAt), 'MMM dd, HH:mm');
+        } catch {
+          return 'Invalid Date';
+        }
+      },
     },
   ];
 
@@ -105,104 +117,13 @@ export const TripsPage: React.FC = () => {
     );
   }
 
-  // When user clicks "Record New Trip" we do a quick live-check for vehicles
-  // (handles the case where a vehicle was created elsewhere but the page's
-  // cached state is stale). If no vehicles exist we redirect to the vehicles
-  // page so the user can create one.
-  const handleOpenRecordModal = async () => {
-    // If we have a count of zero or still null, try to re-fetch live.
-    let current = vehiclesCount;
-    if (current === null || current === 0) {
-      try {
-        const vehicles = await tripService.getMyVehicles();
-        const len = Array.isArray(vehicles) ? vehicles.length : 0;
-        setVehiclesCount(len);
-        current = len;
-      } catch (err) {
-        console.warn('Failed to refresh vehicles before opening record modal', err);
-        // assume zero and send user to create vehicle page
-        setVehiclesCount(0);
-        current = 0;
-      }
-    }
-
-    if (!current || current === 0) {
-      // Help the user create a vehicle first
-      navigate('/owner/vehicles');
-      return;
-    }
-
-    setShowCreateModal(true);
-  };
+  // Open the modal for recording a new trip. Keep logic intentionally simple
+  // for this change: the modal itself will validate (eg — enforce vehicle
+  // selection) and show errors when submission is attempted.
+  const openRecordModal = () => setShowCreateModal(true);
 
   // If we know the user has zero vehicles, prompt them to create one before allowing recording trips.
-  if (trips.length === 0) {
-    return (
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              My Trips
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              View and manage your electric vehicle trips
-            </Typography>
-          </Box>
-          {/* Disable recording a trip when user has no vehicles and show a clear CTA */}
-          <div>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              disabled={vehiclesCount === 0}
-                  onClick={handleOpenRecordModal}
-                  // keyboard friendly: ensure Enter/Space open modal (fallback if click is blocked)
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      // prevent page scroll on Space
-                      e.preventDefault();
-                      void handleOpenRecordModal();
-                    }
-                  }}
-                  // pointer down can trigger in some edge cases where click is intercepted
-                  onPointerDown={(e) => {
-                    // allow normal click to proceed; use pointer down as a best-effort fallback
-                    // but only trigger when left mouse button / primary pointer
-                    if ((e as any).pointerType === 'mouse' || (e as any).pointerType === undefined) {
-                      // do not await — keep UI responsive
-                      void handleOpenRecordModal();
-                    }
-                  }}
-            >
-              Record New Trip
-            </Button>
-            {vehiclesCount === 0 && (
-              <Button
-                variant="outlined"
-                sx={{ ml: 2 }}
-                onClick={() => navigate('/owner/vehicles')}
-              >
-                Create vehicle
-              </Button>
-            )}
-          </div>
-        </Box>
-        <Card>
-          <CardContent>
-            <Typography variant="body1">Không có chuyến nào.</Typography>
-            {vehiclesCount === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Bạn chưa có phương tiện nào — vui lòng tạo phương tiện trước khi ghi nhớ chuyến đi.
-              </Typography>
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Hãy tạo chuyến đi mới bằng cách bấm "Record New Trip".
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  }
+  const hasNoTrips = trips.length === 0;
 
   return (
     <Box>
@@ -219,24 +140,16 @@ export const TripsPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<Add />}
-            disabled={vehiclesCount === 0}
-              onClick={handleOpenRecordModal}
+            onClick={openRecordModal}
           >
             Record New Trip
           </Button>
-
-          <RecordTripModal
-            open={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-            onCreated={(t) => {
-              // Append new trip to the list if returned in the frontend shape
-              try {
-                if (t) setTrips((prev) => [t, ...prev]);
-              } catch (e) {}
-            }}
-          />
           {vehiclesCount === 0 && (
-            <Button variant="outlined" sx={{ ml: 2 }} onClick={() => navigate('/owner/vehicles')}>
+            <Button
+              variant="outlined"
+              sx={{ ml: 2 }}
+              onClick={() => navigate('/owner/vehicles')}
+            >
               Create vehicle
             </Button>
           )}
@@ -244,26 +157,51 @@ export const TripsPage: React.FC = () => {
       </Box>
       <Card>
         <CardContent>
-          <DataGrid
-            rows={trips}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 },
-              },
-            }}
-            pageSizeOptions={[5, 10, 25]}
-            checkboxSelection
-            disableRowSelectionOnClick
-            autoHeight
-            sx={{
-              '& .MuiDataGrid-cell:focus': {
-                outline: 'none',
-              },
-            }}
-          />
+          {hasNoTrips ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {vehiclesCount === 0
+                ? 'Bạn chưa có phương tiện nào — vui lòng tạo phương tiện trước khi ghi nhớ chuyến đi.'
+                : 'Hãy tạo chuyến đi mới bằng cách bấm "Record New Trip".'}
+            </Typography>
+          ) : (
+            <DataGrid
+              rows={trips}
+              columns={columns}
+              getRowId={(row) => row.id || row.createdAt || `${row.vehicleId}-${row.startTime}`}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              checkboxSelection
+              disableRowSelectionOnClick
+              autoHeight
+              sx={{
+                '& .MuiDataGrid-cell:focus': {
+                  outline: 'none',
+                },
+              }}
+            />
+          )}
         </CardContent>
       </Card>
+      <RecordTripModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={(t) => {
+          // Append new trip to the list if returned in the frontend shape
+          try {
+            if (t) {
+              // Ensure the trip has an id for DataGrid
+              if (!t.id) {
+                t.id = t.createdAt || `${t.vehicleId}-${t.startTime}`;
+              }
+              setTrips((prev) => [t, ...prev]);
+            }
+          } catch (e) {}
+        }}
+      />
     </Box>
   );
 };

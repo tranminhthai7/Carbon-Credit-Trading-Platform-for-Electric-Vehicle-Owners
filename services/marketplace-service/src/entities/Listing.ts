@@ -4,9 +4,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  OneToMany,
 } from "typeorm";
-import { Bid } from "./Bid";
 
 /**
  * Listing: Một bài đăng bán tín chỉ carbon
@@ -34,7 +32,4 @@ export class Listing {
 
   @CreateDateColumn()
   createdAt!: Date;
-
-  @OneToMany(() => Bid, (bid) => bid.listing)
-  bids!: Bid[];
 }
