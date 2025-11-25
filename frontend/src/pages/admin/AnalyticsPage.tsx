@@ -51,6 +51,11 @@ export const AnalyticsPage: React.FC = () => {
     { id: 2, value: carbon?.expired || 0, label: 'Expired' },
   ]), [carbon]);
 
+  // Defensive helpers for chart rendering — some chart libraries will throw
+  // if provided with non-iterable values.
+  const isSeriesSafe = (s: any) => Array.isArray(s) && s.every((item: any) => item && Array.isArray(item.data) && item.data.length > 0);
+  const isXaxisSafe = (x: any) => Array.isArray(x) && x.every((axis: any) => Array.isArray(axis.data) && axis.data.length > 0);
+
   const onExportJSON = () => {
     const payload = { range, revenue, users, carbon };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -132,7 +137,11 @@ export const AnalyticsPage: React.FC = () => {
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Revenue Over Time
               </Typography>
-              <LineChart xAxis={[{ scaleType: 'band', data: revenueXAxis }]} series={revenueSeries} height={300} />
+              {isXaxisSafe([{ scaleType: 'band', data: revenueXAxis }]) && isSeriesSafe(revenueSeries) ? (
+                <LineChart xAxis={[{ scaleType: 'band', data: revenueXAxis }]} series={revenueSeries} height={300} />
+              ) : (
+                <Typography color="text.secondary">No revenue data for the selected range</Typography>
+              )}
               <Divider sx={{ mt: 2 }} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Total: {revenue?.total?.toLocaleString() || 0} {revenue?.currency || ''}
@@ -146,9 +155,19 @@ export const AnalyticsPage: React.FC = () => {
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 User Behavior
               </Typography>
-              <LineChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={activeUsersSeries} height={220} />
-              <BarChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={newUsersSeries} height={220} />
-              <LineChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={sessionsSeries} height={220} />
+              {isXaxisSafe([{ scaleType: 'band', data: usersXAxis }]) && isSeriesSafe(activeUsersSeries) ? (
+                <LineChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={activeUsersSeries} height={220} />
+              ) : (
+                <Typography color="text.secondary">No user activity data available</Typography>
+              )}
+
+              {isXaxisSafe([{ scaleType: 'band', data: usersXAxis }]) && isSeriesSafe(newUsersSeries) ? (
+                <BarChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={newUsersSeries} height={220} />
+              ) : null}
+
+              {isXaxisSafe([{ scaleType: 'band', data: usersXAxis }]) && isSeriesSafe(sessionsSeries) ? (
+                <LineChart xAxis={[{ scaleType: 'band', data: usersXAxis }]} series={sessionsSeries} height={220} />
+              ) : null}
             </CardContent>
           </Card>
         </Grid>
@@ -160,10 +179,11 @@ export const AnalyticsPage: React.FC = () => {
               </Typography>
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={12} md={6}>
-                  <PieChart
-                    height={320}
-                    series={[{ data: carbonPie }]}
-                  />
+                  {Array.isArray(carbonPie) && carbonPie.length > 0 ? (
+                    <PieChart height={320} series={[{ data: carbonPie }]} />
+                  ) : (
+                    <Typography color="text.secondary">No carbon stats available</Typography>
+                  )}
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <Typography color="text.secondary">Total Credits</Typography>
@@ -181,6 +201,7 @@ export const AnalyticsPage: React.FC = () => {
         </Grid>
 
       </Grid>
+      
     </Box>
   );
 };

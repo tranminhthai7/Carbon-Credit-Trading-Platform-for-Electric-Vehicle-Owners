@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import reportRoutes from "./routes/report.routes";
 import adminRoutes from "./routes/admin.routes";
+import analyticsRoutes from "./routes/analytics.routes";
 import { connectDB } from "./config/database";
 
 dotenv.config();
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use("/api/reports", reportRoutes);
 app.use("/admin", adminRoutes);
+app.use("/analytics", analyticsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

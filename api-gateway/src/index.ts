@@ -155,6 +155,9 @@ app.use('/api/admin/users', createProxyMiddleware(createProxyOptions(services.re
 // Route: Admin Transactions (get all transactions)
 app.use('/api/admin/transactions', createProxyMiddleware(createProxyOptions(services.reporting, '/admin', { stripServicePath: false })));
 
+// Route: Analytics (revenue, users, carbon stats)
+app.use('/api/analytics', createProxyMiddleware(createProxyOptions(services.reporting, '/analytics', { stripServicePath: false })));
+
 // Route: EV Data Service (Vehicles, Trips, CO2 Calculation)
 app.use('/api/vehicles', createProxyMiddleware(createProxyOptions(services.evData, '/vehicles', { preserveOriginalPath: true })));
 app.use('/api/trips', createProxyMiddleware(createProxyOptions(services.evData, '/trips', { preserveOriginalPath: true })));
@@ -185,7 +188,6 @@ app.use('/api/notifications', createProxyMiddleware(createProxyOptions(services.
 
 // Route: Reporting Service (Analytics, Reports) - preserve '/reports' path so the service can mount '/reports'
 app.use('/api/reports', createProxyMiddleware(createProxyOptions(services.reporting, '/reports', { stripServicePath: false })));
-app.use('/api/analytics', createProxyMiddleware(createProxyOptions(services.reporting, '/analytics')));
 app.use('/api/admin', createProxyMiddleware(createProxyOptions(services.reporting, '/admin', { stripServicePath: false })));
 
 // Route: AI Service (Price Prediction)
