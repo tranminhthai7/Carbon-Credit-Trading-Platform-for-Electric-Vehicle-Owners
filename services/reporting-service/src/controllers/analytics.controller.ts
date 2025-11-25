@@ -31,12 +31,12 @@ export const getRevenueAnalytics = async (req: Request, res: Response) => {
     const revenueResult = await carbonDbPool.query(revenueQuery, [start, end]);
 
     // Calculate total revenue
-    const total = revenueResult.rows.reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+    const total = revenueResult.rows.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
     const response = {
       currency: 'VND',
       total: Math.round(total),
-      points: revenueResult.rows.map(row => ({
+      points: revenueResult.rows.map((row: any) => ({
         date: row.date,
         amount: Math.round(parseFloat(row.amount || 0))
       }))
@@ -83,7 +83,7 @@ export const getUserAnalytics = async (req: Request, res: Response) => {
 
     while (currentDate <= end) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      const dayData = userResult.rows.find(row => row.date === dateStr);
+      const dayData = userResult.rows.find((row: any) => row.date === dateStr);
 
       points.push({
         date: dateStr,
