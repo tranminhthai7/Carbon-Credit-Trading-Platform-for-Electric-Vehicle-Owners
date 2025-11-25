@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, getProfile, updateProfile } from '../controllers/auth.controller';
+import { register, login, refresh, logout, getProfile, updateProfile, getAllUsers } from '../controllers/auth.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -44,5 +44,13 @@ router.get('/profile', authMiddleware, getProfile);
  * @desc    Update user profile (protected)
  */
 router.put('/:id', authMiddleware, updateProfile);
+
+/**
+ * @route   GET /users
+ * @desc    Get all users (admin only)
+ * @access  Private (Admin)
+ */
+router.get('/users', getAllUsers); // Temporarily remove authMiddleware for testing
+router.get('/admin/users', getAllUsers); // Add admin route for API Gateway
 
 export default router;

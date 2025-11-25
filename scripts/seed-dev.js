@@ -200,7 +200,7 @@ async function run() {
 
     const seller = await registerAndVerify(sellerEmail, sellerPass, 'ev_owner');
     const buyer = await registerAndVerify(buyerEmail, buyerPass, 'buyer');
-    const admin = await registerAndVerify('admin@local.test', 'Admin123!', 'admin');
+    const admin = await registerAndVerify('admin@example.com', 'Admin123!', 'admin');
     console.log('Seller', seller.user.id, 'Buyer', buyer.user.id, 'Admin', admin.user.id);
 
     // Create wallets & mint credits (seller should have credits to sell) — provide auth tokens

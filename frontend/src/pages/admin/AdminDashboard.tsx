@@ -38,7 +38,7 @@ import {
   SyncOutlined,
   RocketOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import { apiClient } from '../../services/api';
 
 // Types định nghĩa
 interface PlatformStats {
@@ -86,32 +86,48 @@ const AdminDashboard: React.FC = () => {
       try {
         setLoading(true);
         
-        // Giả lập API calls - thay thế bằng API thật khi backend ready
+        // Temporarily disable API calls to avoid errors
         const [statsResponse, healthResponse, activitiesResponse] = await Promise.all([
-          axios.get('/api/admin/stats'),
-          axios.get('/api/admin/health'),
-          axios.get('/api/admin/activities')
+          apiClient.get('/api/admin/stats'),
+          apiClient.get('/api/admin/health'),
+          apiClient.get('/api/admin/activities')
         ]);
 
-        setStats(statsResponse.data);
-        setHealth(healthResponse.data);
-        setActivities(activitiesResponse.data);
+        const statsData = statsResponse.data;
+        const healthData = healthResponse.data;
+        const activitiesData = Array.isArray(activitiesResponse.data) ? activitiesResponse.data : [];
+
+        // Ensure stats has arrays
+        if (statsData && typeof statsData === 'object') {
+          if (!Array.isArray(statsData.revenueData)) statsData.revenueData = [];
+          if (!Array.isArray(statsData.userGrowthData)) statsData.userGrowthData = [];
+        }
+
+        console.log('Stats data:', statsData);
+        console.log('Activities data:', activitiesData);
+
+        setStats(statsData);
+        setHealth(healthData);
+        setActivities(activitiesData);
+        
+        // Use fallback data
+        // setFallbackData();
         
         // Giả lập alerts
-        setAlerts([
-          {
-            id: '1',
-            level: 'warning',
-            message: 'Hệ thống thanh toán đang chậm',
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: '2',
-            level: 'info',
-            message: '5 tín chỉ mới được niêm yết',
-            timestamp: new Date().toISOString()
-          }
-        ]);
+        // setAlerts([
+        //   {
+        //     id: '1',
+        //     level: 'warning',
+        //     message: 'Hệ thống thanh toán đang chậm',
+        //     timestamp: new Date().toISOString()
+        //   },
+        //   {
+        //     id: '2',
+        //     level: 'info',
+        //     message: '5 tín chỉ mới được niêm yết',
+        //     timestamp: new Date().toISOString()
+        //   }
+        // ]);
       } catch (error) {
         console.error('Lỗi khi fetch dữ liệu:', error);
         // Fallback data để demo
@@ -294,7 +310,7 @@ const AdminDashboard: React.FC = () => {
         <Col span={12}>
           <Card title="Doanh thu nền tảng theo thời gian" bordered={false}>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={stats?.revenueData}>
+              <AreaChart data={Array.isArray(stats?.revenueData) ? stats.revenueData : []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -308,7 +324,7 @@ const AdminDashboard: React.FC = () => {
         <Col span={12}>
           <Card title="Xu hướng đăng ký người dùng" bordered={false}>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats?.userGrowthData}>
+              <LineChart data={Array.isArray(stats?.userGrowthData) ? stats.userGrowthData : []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
@@ -348,7 +364,7 @@ const AdminDashboard: React.FC = () => {
         <Col span={12}>
           <Card title="Hành động nhanh" bordered={false}>
             <Row gutter={[16, 16]}>
-              {quickActions.map((action, index) => (
+              {Array.isArray(quickActions) && quickActions.map((action, index) => (
                 <Col span={12} key={index}>
                   <Button 
                     type="primary" 
@@ -370,7 +386,7 @@ const AdminDashboard: React.FC = () => {
         <Col span={12}>
           <Card title="Cảnh báo quan trọng" bordered={false}>
             <Space direction="vertical" style={{ width: '100%' }}>
-              {alerts.map(alert => (
+              {Array.isArray(alerts) && alerts.map(alert => (
                 <Alert
                   key={alert.id}
                   message={alert.message}
@@ -386,7 +402,7 @@ const AdminDashboard: React.FC = () => {
         <Col span={12}>
           <Card title="Hoạt động gần đây" bordered={false}>
             <Timeline>
-              {activities.map(activity => (
+              {Array.isArray(activities) && activities.map(activity => (
                 <Timeline.Item key={activity.id} color={
                   activity.type === 'user' ? 'blue' :
                   activity.type === 'transaction' ? 'green' :

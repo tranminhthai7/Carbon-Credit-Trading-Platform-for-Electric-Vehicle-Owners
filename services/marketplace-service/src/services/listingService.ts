@@ -10,31 +10,34 @@ console.log("AppDataSource imported:", !!AppDataSource);
 
 export const test = () => "test";
 
-const listingRepo = () => AppDataSource.getRepository('Listing' as any);
+const getListingRepo = () => {
+  if (!AppDataSource) throw new Error("AppDataSource not initialized");
+  return AppDataSource.getRepository(Listing);
+};
 
 export async function createListing(userId: string, amount: number, pricePerCredit: number) {
-  const repo = listingRepo();
+  const repo = getListingRepo();
   const listing = repo.create({ userId, amount, pricePerCredit, status: "OPEN" });
   return repo.save(listing);
 }
 
 export async function getAllListings() {
-  const repo = listingRepo();
+  const repo = getListingRepo();
   return repo.find();
 }
 
 export async function getListingById(listingId: string) {
-  const repo = listingRepo();
+  const repo = getListingRepo();
   return repo.findOneBy({ id: listingId });
 }
 
 export async function getUserListings(userId: string) {
-  const repo = listingRepo();
+  const repo = getListingRepo();
   return repo.find({ where: { userId } });
 }
 
 export async function buyListing(listingId: string, buyerId: string) {
-  const repo = listingRepo();
+  const repo = getListingRepo();
   const listing = await repo.findOneBy({ id: listingId });
 
   if (!listing) throw new Error("Listing not found");

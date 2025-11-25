@@ -1,0 +1,20 @@
+# Dockerfile for seeding sample data into the database
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package.json and package-lock.json (if available)
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the seed script
+COPY scripts/seed-dev.js ./seed-dev.js
+
+# Make the script executable
+RUN chmod +x ./seed-dev.js
+
+# Default command to run the seed script
+CMD ["node", "./seed-dev.js", "--force-db", "--verbose"]

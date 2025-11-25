@@ -15,6 +15,7 @@ services:
       - "5432:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
+      - ./init-scripts/01-init-user-db.sql:/docker-entrypoint-initdb.d/01-init-user-db.sql
     networks:
       - carbon-network
     healthcheck:
@@ -35,6 +36,7 @@ services:
       - "5433:5432"
     volumes:
       - carbon_db_data:/var/lib/postgresql/data
+      - ./init-scripts/02-init-carbon-db.sql:/docker-entrypoint-initdb.d/02-init-carbon-db.sql
     networks:
       - carbon-network
     healthcheck:
@@ -55,6 +57,7 @@ services:
       - "5434:5432"
     volumes:
       - marketplace_db_data:/var/lib/postgresql/data
+      - ./init-scripts/03-init-marketplace-db.sql:/docker-entrypoint-initdb.d/03-init-marketplace-db.sql
     networks:
       - carbon-network
     healthcheck:
@@ -95,6 +98,7 @@ services:
       - "5436:5432"
     volumes:
       - verification_db_data:/var/lib/postgresql/data
+      - ./init-scripts/04-init-verification-db.sql:/docker-entrypoint-initdb.d/04-init-verification-db.sql
     networks:
       - carbon-network
     healthcheck:
@@ -135,6 +139,7 @@ services:
       - "27017:27017"
     volumes:
       - ev_mongodb_data:/data/db
+      - ./init-scripts/05-init-ev-mongodb.js:/docker-entrypoint-initdb.d/05-init-ev-mongodb.js
     networks:
       - carbon-network
     healthcheck:
@@ -155,6 +160,7 @@ services:
       - "27018:27017"
     volumes:
       - reporting_mongodb_data:/data/db
+      - ./init-scripts/06-init-reporting-mongodb.js:/docker-entrypoint-initdb.d/06-init-reporting-mongodb.js
     networks:
       - carbon-network
     healthcheck:
@@ -578,7 +584,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: http://api-gateway:8000
     ports:
       - "5173:80"
     depends_on:
@@ -586,6 +592,35 @@ services:
     networks:
       - carbon-network
     restart: unless-stopped
+
+  # Seed service for sample data
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile.seed
+    container_name: carbon-seed
+    environment:
+      GATEWAY_URL: http://api-gateway:8000
+      CARBON_DB_CONTAINER: carbon-db
+      CARBON_DB_USER: ${POSTGRES_USER:-admin}
+      CARBON_DB_NAME: carbon_credit_db
+      MARKETPLACE_DB_CONTAINER: marketplace-db
+      MARKETPLACE_DB_USER: ${POSTGRES_USER:-admin}
+      MARKETPLACE_DB_NAME: marketplace_db
+      VERIFICATION_DB_CONTAINER: verification-db
+      VERIFICATION_DB_USER: ${POSTGRES_USER:-admin}
+      VERIFICATION_DB_NAME: verification_db
+    depends_on:
+      - api-gateway
+      - carbon-db
+      - marketplace-db
+      - verification-db
+    networks:
+      - carbon-network
+    # Run once and exit
+    command: ["node", "./seed-dev.js", "--force-db", "--verbose"]
+    profiles:
+      - seed
 
 # ===== NETWORKS =====
 networks:

@@ -20,12 +20,10 @@ app.get("/health", (_, res) => res.json({ status: "ok" }));
 // Initialize DataSource dynamically
 async function initializeApp() {
   try {
-    // Use glob patterns for entities so TypeORM discovers metadata whether
-    // running from TS (dev) or JS (production/build). This avoids duplicate
-    // class definitions when .js artifacts are present.
-    const entityPattern = process.env.NODE_ENV === 'production'
-      ? __dirname + '/entities/*.js'
-      : __dirname + '/entities/*.ts';
+    // Import entities directly to ensure they are loaded
+    const { Listing } = await import("./entities/Listing");
+    const { Order } = await import("./entities/Order");
+    const { Bid } = await import("./entities/Bid");
 
     const AppDataSource = new DataSource({
       type: "postgres",
@@ -36,7 +34,7 @@ async function initializeApp() {
       database: process.env.DB_NAME || process.env.POSTGRES_NAME || "marketplace_db",
       synchronize: true,
       logging: true,
-      entities: [entityPattern],
+      entities: [Listing, Order, Bid],
     });
 
     await AppDataSource.initialize();

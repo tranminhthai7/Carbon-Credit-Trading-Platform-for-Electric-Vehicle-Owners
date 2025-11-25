@@ -1,27 +1,52 @@
-import React from 'react';
-import { Box, Typography, Card, CardContent, Chip } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Card, CardContent, Chip, CircularProgress, Alert } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
+interface Transaction {
+  id: string;
+  userId: string;
+  type: 'EARN' | 'SPEND';
+  amount: number;
+  description: string;
+  createdAt: string;
+}
+
 export const TransactionsPage: React.FC = () => {
-  // Mock data - replace with actual API
-  const transactions = [
-    {
-      id: '1',
-      userId: 'user123',
-      type: 'EARN',
-      amount: 50.0,
-      description: 'Carbon credit earned from trip',
-      createdAt: '2024-03-01 10:30',
-    },
-    {
-      id: '2',
-      userId: 'user456',
-      type: 'SPEND',
-      amount: 75.0,
-      description: 'Carbon credit purchase',
-      createdAt: '2024-03-02 14:15',
-    },
-  ];
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch('/api/admin/transactions');
+        if (!response.ok) {
+          throw new Error('Failed to fetch transactions');
+        }
+        const data = await response.json();
+        if (data.success) {
+          // Transform API data to match component expectations
+          const transformedTransactions = data.data.map((transaction: any) => ({
+            id: transaction.id,
+            userId: transaction.userId,
+            type: transaction.type,
+            amount: transaction.amount,
+            description: transaction.description,
+            createdAt: transaction.createdAt
+          }));
+          setTransactions(transformedTransactions);
+        } else {
+          throw new Error('API returned error');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   const columns: GridColDef[] = [
     {
@@ -55,6 +80,25 @@ export const TransactionsPage: React.FC = () => {
       flex: 1,
     },
   ];
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          All Transactions
+        </Typography>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box>

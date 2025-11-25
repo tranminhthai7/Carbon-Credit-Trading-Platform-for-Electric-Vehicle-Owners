@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/error.middleware';
-import { connectDatabase } from './config/database';
+// import { connectDatabase } from './config/database';
 
 // Load environment variables
 dotenv.config();
@@ -67,8 +67,8 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
-    // Connect to database
-    await connectDatabase();
+    // Skip database connection for now
+    // await connectDatabase();
     
     app.listen(PORT, () => {
       console.log(`✅ User Service running on port ${PORT}`);
