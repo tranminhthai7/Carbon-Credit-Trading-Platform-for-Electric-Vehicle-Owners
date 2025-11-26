@@ -51,4 +51,17 @@ export const verificationService = {
     const response = await apiClient.get<Certificate[]>('/api/verifications/certificates');
     return response.data;
   },
+
+  // Submit verification request for a trip
+  submitVerification: async (data: {
+    user_id: string;
+    vehicle_id: string;
+    co2_amount: number;
+    trips_count: number;
+    emission_data: any;
+    trip_details: any;
+  }): Promise<any> => {
+    const response = await apiClient.post('/api/verifications/credits/verify', data);
+    return response.data;
+  },
 };

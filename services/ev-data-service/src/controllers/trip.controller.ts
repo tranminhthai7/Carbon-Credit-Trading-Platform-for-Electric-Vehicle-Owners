@@ -357,10 +357,52 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
           distance: t.distance_km,
           energyConsumed: (t as any).energy_consumed ?? (t as any).energyConsumed ?? null,
           carbonSaved: t.co2_saved_kg,
-          verificationStatus: 'PENDING',
+          verificationStatus: 'UNVERIFIED', // Will be updated below
           createdAt: t.created_at,
         });
       }
+    }
+
+    // Get verification statuses from verification service
+    try {
+      const verificationResponse = await fetch(`${process.env.VERIFICATION_SERVICE_URL || 'http://verification-service:3006'}/api/verifications/user/${userId}`, {
+        headers: {
+          'Authorization': req.headers.authorization || '',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (verificationResponse.ok) {
+        const verifications = await verificationResponse.json();
+        
+        // Map verification status to trips
+        trips.forEach(trip => {
+          // Find verification for this trip by tripId
+          const verification = verifications.find((v: any) => 
+            v.trip_details?.tripId === trip.id
+          );
+          
+          if (verification) {
+            // Map backend status to frontend status
+            switch (verification.status) {
+              case 'approved':
+                trip.verificationStatus = 'VERIFIED';
+                break;
+              case 'pending':
+                trip.verificationStatus = 'PENDING';
+                break;
+              case 'rejected':
+                trip.verificationStatus = 'REJECTED';
+                break;
+              default:
+                trip.verificationStatus = 'UNVERIFIED';
+            }
+          }
+        });
+      }
+    } catch (verificationError) {
+      console.warn('Failed to fetch verification statuses:', verificationError);
+      // Continue with UNVERIFIED status as fallback
     }
 
     // return as array

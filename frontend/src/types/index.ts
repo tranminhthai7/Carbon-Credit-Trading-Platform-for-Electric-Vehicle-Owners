@@ -56,8 +56,21 @@ export interface Trip {
   distance: number;
   energyConsumed: number | null;
   carbonSaved: number;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
   createdAt: string;
+}
+
+export interface Verification {
+  id: string;
+  user_id: string;
+  vehicle_id: string;
+  co2_amount: number;
+  trips_count: number;
+  emission_data: any;
+  trip_details: any;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at?: string;
 }
 
 // Wallet and Credit types
@@ -128,12 +141,15 @@ export interface Payment {
 // Verification types
 export interface Verification {
   id: string;
-  tripId: string;
-  verifierId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  comments?: string;
-  verifiedAt?: string;
-  createdAt: string;
+  user_id: string;
+  vehicle_id: string;
+  co2_amount: number;
+  trips_count: number;
+  emission_data: any;
+  trip_details: any;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at?: string;
 }
 
 // Certificate types

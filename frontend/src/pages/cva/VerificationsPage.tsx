@@ -54,7 +54,14 @@ export const VerificationsPage: React.FC = () => {
       setSelectedVerification(null);
       setComments('');
       setAction(null);
-      fetchVerifications();
+      // Remove the processed verification from the list immediately
+      setVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
+      // Try to fetch updated list, but don't fail if it doesn't work
+      try {
+        await fetchVerifications();
+      } catch (fetchError) {
+        console.warn('Failed to refresh verifications list:', fetchError);
+      }
     } catch (error) {
       console.error('Failed to process verification:', error);
     }
@@ -65,7 +72,56 @@ export const VerificationsPage: React.FC = () => {
       field: 'id',
       headerName: 'Trip ID',
       width: 200,
-      valueGetter: (params: any) => params.row.id.substring(0, 8) + '...',
+      valueGetter: (params: any) => params.row.trip_details?.tripId?.substring(0, 8) + '...' || params.row.id.substring(0, 8) + '...',
+    },
+    {
+      field: 'co2_amount',
+      headerName: 'CO2 Saved (kg)',
+      width: 130,
+      type: 'number',
+      valueGetter: (params: any) => {
+        const value = params.row.co2_amount;
+        return typeof value === 'string' ? parseFloat(value) : value;
+      },
+      valueFormatter: (params) => {
+        try {
+          const value = params.value;
+          if (value === null || value === undefined) return '0.00';
+          const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+          return isNaN(num) ? '0.00' : num.toFixed(2);
+        } catch (error) {
+          console.warn('Error formatting CO2 value:', params.value, error);
+          return '0.00';
+        }
+      },
+    },
+    {
+      field: 'distance',
+      headerName: 'Distance (km)',
+      width: 120,
+      type: 'number',
+      valueGetter: (params: any) => {
+        const value = params.row.emission_data?.distance;
+        return typeof value === 'string' ? parseFloat(value) : value;
+      },
+      valueFormatter: (params) => {
+        try {
+          const value = params.value;
+          if (value === null || value === undefined) return '0.0';
+          const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+          return isNaN(num) ? '0.0' : num.toFixed(1);
+        } catch (error) {
+          console.warn('Error formatting distance value:', params.value, error);
+          return '0.0';
+        }
+      },
+    },
+    {
+      field: 'trips_count',
+      headerName: 'Trips',
+      width: 80,
+      type: 'number',
+      valueGetter: (params: any) => params.row.trips_count,
     },
     {
       field: 'created_at',
@@ -184,6 +240,45 @@ export const VerificationsPage: React.FC = () => {
           {action === 'approve' ? 'Approve' : 'Reject'} Verification
         </DialogTitle>
         <DialogContent>
+          {selectedVerification && (
+            <Box mb={2}>
+              <Typography variant="h6" gutterBottom>
+                Trip Details
+              </Typography>
+              <Typography variant="body2">
+                <strong>CO2 Saved:</strong> {(() => {
+                  try {
+                    const value = selectedVerification.co2_amount;
+                    if (value === null || value === undefined) return '0.00';
+                    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+                    return isNaN(num) ? '0.00' : num.toFixed(2);
+                  } catch (error) {
+                    console.warn('Error formatting CO2 in dialog:', selectedVerification.co2_amount, error);
+                    return '0.00';
+                  }
+                })()} kg
+              </Typography>
+              <Typography variant="body2">
+                <strong>Distance:</strong> {(() => {
+                  try {
+                    const value = selectedVerification.emission_data?.distance;
+                    if (value === null || value === undefined) return '0.0';
+                    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+                    return isNaN(num) ? '0.0' : num.toFixed(1);
+                  } catch (error) {
+                    console.warn('Error formatting distance in dialog:', selectedVerification.emission_data?.distance, error);
+                    return '0.0';
+                  }
+                })()} km
+              </Typography>
+              <Typography variant="body2">
+                <strong>Number of Trips:</strong> {selectedVerification.trips_count}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Submitted:</strong> {new Date(selectedVerification.created_at).toLocaleDateString()}
+              </Typography>
+            </Box>
+          )}
           <TextField
             fullWidth
             label="Comments"

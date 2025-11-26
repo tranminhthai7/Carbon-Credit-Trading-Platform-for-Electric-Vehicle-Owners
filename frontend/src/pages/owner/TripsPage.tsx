@@ -15,6 +15,8 @@ import { useNavigate } from 'react-router-dom';
 import { Trip } from '../../types';
 import RecordTripModal from '../../components/trips/RecordTripModal';
 import { format } from 'date-fns';
+import { verificationService } from '../../services/verification.service';
+import { useAuth } from '../../context/AuthContext';
 
 export const TripsPage: React.FC = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -22,6 +24,7 @@ export const TripsPage: React.FC = () => {
   const [vehiclesCount, setVehiclesCount] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTrips = async () => {
@@ -47,6 +50,35 @@ export const TripsPage: React.FC = () => {
     };
     fetchTrips();
   }, []);
+
+  const handleSubmitVerification = async (trip: Trip) => {
+    if (!user) return;
+    try {
+      await verificationService.submitVerification({
+        user_id: user.id,
+        vehicle_id: trip.vehicleId,
+        co2_amount: trip.carbonSaved,
+        trips_count: 1, // Assuming one trip per submission, but could aggregate
+        emission_data: {
+          distance: trip.distance,
+          energyConsumed: trip.energyConsumed,
+        },
+        trip_details: {
+          tripId: trip.id,
+          startTime: trip.startTime,
+          endTime: trip.endTime,
+        },
+      });
+      // Update the trip status to PENDING
+      setTrips(prev => prev.map(t => 
+        t.id === trip.id ? { ...t, verificationStatus: 'PENDING' } : t
+      ));
+      alert('Verification submitted successfully!');
+    } catch (error) {
+      console.error('Failed to submit verification:', error);
+      alert('Failed to submit verification. Please try again.');
+    }
+  };
 
   const columns: GridColDef[] = [
     {
@@ -91,7 +123,9 @@ export const TripsPage: React.FC = () => {
             ? 'success'
             : status === 'PENDING'
             ? 'warning'
-            : 'error';
+            : status === 'REJECTED'
+            ? 'error'
+            : 'default'; // for UNVERIFIED
         return <Chip label={status} color={color} size="small" />;
       },
     },
@@ -105,6 +139,29 @@ export const TripsPage: React.FC = () => {
         } catch {
           return 'Invalid Date';
         }
+      },
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 200,
+      renderCell: (params) => {
+        const trip = params.row;
+        if (trip.verificationStatus === 'VERIFIED') {
+          return <Chip label="Verified" color="success" size="small" />;
+        }
+        if (trip.verificationStatus === 'PENDING') {
+          return <Chip label="Pending Verification" color="warning" size="small" />;
+        }
+        return (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => handleSubmitVerification(trip)}
+          >
+            Submit for Verification
+          </Button>
+        );
       },
     },
   ];
