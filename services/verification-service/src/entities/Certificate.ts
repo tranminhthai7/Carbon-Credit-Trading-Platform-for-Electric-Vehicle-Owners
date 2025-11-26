@@ -11,10 +11,10 @@ export class Certificate {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
+  @Column('varchar')
   user_id: string;
 
-  @Column('uuid', { nullable: true })
+  @Column('varchar', { nullable: true })
   verification_id: string;
 
   @Column({
@@ -41,7 +41,7 @@ export class Certificate {
   @Column('varchar', { length: 500, nullable: true })
   certificate_url: string; // URL to PDF certificate
 
-  @Column('uuid')
+  @Column('varchar')
   issued_by: string; // CVA ID
 
   @CreateDateColumn()
