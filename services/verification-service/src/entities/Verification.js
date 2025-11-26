@@ -26,11 +26,11 @@ __decorate([
     __metadata("design:type", String)
 ], Verification.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('varchar'),
     __metadata("design:type", String)
 ], Verification.prototype, "user_id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('varchar'),
     __metadata("design:type", String)
 ], Verification.prototype, "vehicle_id", void 0);
 __decorate([
@@ -50,7 +50,7 @@ __decorate([
     __metadata("design:type", String)
 ], Verification.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid', { nullable: true }),
+    (0, typeorm_1.Column)('varchar', { nullable: true }),
     __metadata("design:type", String)
 ], Verification.prototype, "cva_id", void 0);
 __decorate([

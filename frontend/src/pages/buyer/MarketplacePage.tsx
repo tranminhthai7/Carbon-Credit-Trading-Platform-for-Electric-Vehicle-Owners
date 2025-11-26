@@ -47,7 +47,7 @@ export const MarketplacePage: React.FC = () => {
     try {
       // backend expects buyerId in body — use current authenticated user id
       if (!user?.id) throw new Error('User not authenticated');
-      await marketplaceService.purchaseListing(selectedListing.id, user.id);
+      await marketplaceService.purchaseListing(selectedListing.id, user.id, Number(quantity));
       setSelectedListing(null);
       setQuantity('');
       fetchListings();

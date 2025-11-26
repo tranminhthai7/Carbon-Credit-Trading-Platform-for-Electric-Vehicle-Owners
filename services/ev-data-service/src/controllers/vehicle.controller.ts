@@ -26,21 +26,23 @@ export const registerVehicle = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Check if license plate already exists
-    const existingVehicle = await Vehicle.findOne({ license_plate: value.license_plate.toUpperCase() });
-    if (existingVehicle) {
-      res.status(409).json({
-        success: false,
-        message: 'License plate already registered',
-      });
-      return;
+    // Check if license plate already exists (only if provided)
+    if (value.license_plate) {
+      const existingVehicle = await Vehicle.findOne({ license_plate: value.license_plate.toUpperCase() });
+      if (existingVehicle) {
+        res.status(409).json({
+          success: false,
+          message: 'License plate already registered',
+        });
+        return;
+      }
     }
 
     // Create vehicle
     const vehicle = await Vehicle.create({
       ...value,
       user_id,
-      license_plate: value.license_plate.toUpperCase(),
+      license_plate: value.license_plate ? value.license_plate.toUpperCase() : undefined,
       vin: value.vin?.toUpperCase(),
     });
 

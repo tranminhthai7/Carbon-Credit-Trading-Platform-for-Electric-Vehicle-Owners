@@ -67,12 +67,12 @@ export async function buyListingHandler(req: Request, res: Response) {
   try {
     // lấy id từ URL params
     const listingId = req.params.id;
-    const { buyerId } = req.body;
+    const { buyerId, quantity } = req.body;
 
-    if (!listingId || !buyerId)
-      return res.status(400).json({ error: "listingId and buyerId required" });
+    if (!listingId || !buyerId || !quantity)
+      return res.status(400).json({ error: "listingId, buyerId and quantity required" });
 
-    const result = await listingService.buyListing(listingId, buyerId);
+    const result = await listingService.buyListing(listingId, buyerId, quantity);
     res.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

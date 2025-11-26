@@ -9,37 +9,43 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Wallet = void 0;
-//Wallet.ts
+exports.Order = void 0;
 const typeorm_1 = require("typeorm");
-const Transaction_1 = require("./Transaction");
-let Wallet = class Wallet {
+let Order = class Order {
 };
-exports.Wallet = Wallet;
+exports.Order = Order;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
     __metadata("design:type", String)
-], Wallet.prototype, "id", void 0);
+], Order.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], Wallet.prototype, "userId", void 0);
+], Order.prototype, "buyerId", void 0);
 __decorate([
-    (0, typeorm_1.Column)('double precision', { default: 0 }),
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], Order.prototype, "sellerId", void 0);
+__decorate([
+    (0, typeorm_1.Column)("double precision"),
     __metadata("design:type", Number)
-], Wallet.prototype, "balance", void 0);
+], Order.prototype, "amount", void 0);
+__decorate([
+    (0, typeorm_1.Column)("double precision"),
+    __metadata("design:type", Number)
+], Order.prototype, "totalPrice", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: "PENDING" }),
+    __metadata("design:type", String)
+], Order.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], Order.prototype, "listingId", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
-], Wallet.prototype, "createdAt", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => Transaction_1.Transaction, (tx) => tx.fromWallet),
-    __metadata("design:type", Array)
-], Wallet.prototype, "outgoing", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => Transaction_1.Transaction, (tx) => tx.toWallet),
-    __metadata("design:type", Array)
-], Wallet.prototype, "incoming", void 0);
-exports.Wallet = Wallet = __decorate([
+], Order.prototype, "createdAt", void 0);
+exports.Order = Order = __decorate([
     (0, typeorm_1.Entity)()
-], Wallet);
+], Order);

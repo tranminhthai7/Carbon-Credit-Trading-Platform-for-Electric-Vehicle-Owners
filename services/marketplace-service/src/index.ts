@@ -32,7 +32,7 @@ async function initializeApp() {
       username: process.env.DB_USER || process.env.POSTGRES_USER || "admin",
       password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "secret123",
       database: process.env.DB_NAME || process.env.POSTGRES_NAME || "marketplace_db",
-      synchronize: true,
+      synchronize: false, // temporarily disable sync
       dropSchema: false,
       logging: true,
       entities: [Listing, Order, Bid],

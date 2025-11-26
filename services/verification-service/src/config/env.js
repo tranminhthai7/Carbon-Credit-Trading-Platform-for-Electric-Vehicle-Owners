@@ -9,7 +9,7 @@ dotenv_1.default.config();
 const getEnvConfig = () => {
     const requiredEnvVars = [
         'DB_HOST',
-        'DB_USER',
+        'DB_USERNAME',
         'DB_PASSWORD',
         'DB_NAME',
         'WALLET_SERVICE_URL',
@@ -25,7 +25,7 @@ const getEnvConfig = () => {
         NODE_ENV: process.env.NODE_ENV || 'development',
         DB_HOST: process.env.DB_HOST,
         DB_PORT: parseInt(process.env.DB_PORT || '5432', 10),
-        DB_USERNAME: process.env.DB_USER,
+        DB_USERNAME: process.env.DB_USERNAME,
         DB_PASSWORD: process.env.DB_PASSWORD,
         DB_NAME: process.env.DB_NAME,
         WALLET_SERVICE_URL: process.env.WALLET_SERVICE_URL,

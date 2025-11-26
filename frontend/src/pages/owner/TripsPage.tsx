@@ -7,13 +7,19 @@ import {
   Button,
   Chip,
   CircularProgress,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Add } from '@mui/icons-material';
+import { Add, UploadFile, Edit, Delete } from '@mui/icons-material';
 import { tripService } from '../../services/trip.service';
 import { useNavigate } from 'react-router-dom';
 import { Trip } from '../../types';
 import RecordTripModal from '../../components/trips/RecordTripModal';
+import { ImportTripsModal } from '../../components/trips/ImportTripsModal';
 import { format } from 'date-fns';
 import { verificationService } from '../../services/verification.service';
 import { useAuth } from '../../context/AuthContext';
@@ -23,31 +29,36 @@ export const TripsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [vehiclesCount, setVehiclesCount] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+  const [deleteConfirmTrip, setDeleteConfirmTrip] = useState<{ trip: Trip; vehicleId: string; tripIndex: number } | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchTrips = async () => {
+  const fetchTrips = async () => {
+    try {
+      const data = await tripService.getMyTrips();
+      setTrips(data);
+      // attempt to detect whether user owns vehicles so we can prevent creating trips when none exist
       try {
-        const data = await tripService.getMyTrips();
-        setTrips(data);
-        // attempt to detect whether user owns vehicles so we can prevent creating trips when none exist
-        try {
-          const vehicles = await tripService.getMyVehicles();
-          setVehiclesCount(Array.isArray(vehicles) ? vehicles.length : 0);
-        } catch (vehErr) {
-          // if fetching vehicles fails, we still proceed — default to 0 so UI guides user
-          console.warn('Failed to fetch vehicles for trips page:', vehErr);
-          setVehiclesCount(0);
-        }
-      } catch (error: any) {
-        // Show helpful message for common errors (no vehicles / unauthorized)
-        console.error('Failed to fetch trips:', error);
-        // optionally we could set an error state to display in UI
-      } finally {
-        setLoading(false);
+        const vehicles = await tripService.getMyVehicles();
+        setVehiclesCount(Array.isArray(vehicles) ? vehicles.length : 0);
+      } catch (vehErr) {
+        // if fetching vehicles fails, we still proceed — default to 0 so UI guides user
+        console.warn('Failed to fetch vehicles for trips page:', vehErr);
+        setVehiclesCount(0);
       }
-    };
+    } catch (error: any) {
+      // Show helpful message for common errors (no vehicles / unauthorized)
+      console.error('Failed to fetch trips:', error);
+      // optionally we could set an error state to display in UI
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTrips();
   }, []);
 
@@ -77,6 +88,41 @@ export const TripsPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to submit verification:', error);
       alert('Failed to submit verification. Please try again.');
+    }
+  };
+
+  const handleDeleteTrip = async (trip: Trip) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa chuyến đi này?')) return;
+
+    try {
+      await tripService.deleteTrip(trip.vehicleId, trip.tripIndex);
+      // Refresh trips from server to update indices
+      await fetchTrips();
+      alert('Trip deleted successfully!');
+    } catch (error: any) {
+      console.error('Delete trip error:', error);
+      alert(error.response?.data?.message || 'Failed to delete trip');
+    }
+  };
+
+  const handleEditTrip = (trip: Trip) => {
+    setEditingTrip(trip);
+    setShowCreateModal(true);
+  };
+
+  const handleUpdateTrip = async (tripData: any) => {
+    if (!editingTrip) return;
+
+    try {
+      await tripService.updateTrip(editingTrip.vehicleId, editingTrip.tripIndex, tripData);
+      
+      // Refresh trips list
+      await fetchTrips();
+      setEditingTrip(null);
+      alert('Trip updated successfully!');
+    } catch (error) {
+      console.error('Failed to update trip:', error);
+      alert('Failed to update trip. Please try again.');
     }
   };
 
@@ -154,13 +200,32 @@ export const TripsPage: React.FC = () => {
           return <Chip label="Pending Verification" color="warning" size="small" />;
         }
         return (
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => handleSubmitVerification(trip)}
-          >
-            Submit for Verification
-          </Button>
+          <Box>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleEditTrip(trip)}
+              title="Edit trip"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDeleteTrip(trip)}
+              title="Delete trip"
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => handleSubmitVerification(trip)}
+              sx={{ ml: 1 }}
+            >
+              Verify
+            </Button>
+          </Box>
         );
       },
     },
@@ -178,6 +243,22 @@ export const TripsPage: React.FC = () => {
   // for this change: the modal itself will validate (eg — enforce vehicle
   // selection) and show errors when submission is attempted.
   const openRecordModal = () => setShowCreateModal(true);
+
+  const openImportModal = async () => {
+    try {
+      const vehicles = await tripService.getMyVehicles();
+      if (vehicles.length > 0) {
+        setSelectedVehicleId(vehicles[0].id);
+        setShowImportModal(true);
+      } else {
+        alert('Bạn cần tạo phương tiện trước khi import trips');
+        navigate('/owner/vehicles');
+      }
+    } catch (error) {
+      console.error('Failed to fetch vehicles:', error);
+      alert('Lỗi khi tải danh sách phương tiện');
+    }
+  };
 
   // If we know the user has zero vehicles, prompt them to create one before allowing recording trips.
   const hasNoTrips = trips.length === 0;
@@ -200,6 +281,14 @@ export const TripsPage: React.FC = () => {
             onClick={openRecordModal}
           >
             Record New Trip
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<UploadFile />}
+            sx={{ ml: 2 }}
+            onClick={openImportModal}
+          >
+            Import từ File
           </Button>
           {vehiclesCount === 0 && (
             <Button
@@ -245,7 +334,10 @@ export const TripsPage: React.FC = () => {
       </Card>
       <RecordTripModal
         open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingTrip(null);
+        }}
         onCreated={(t) => {
           // Append new trip to the list if returned in the frontend shape
           try {
@@ -257,6 +349,17 @@ export const TripsPage: React.FC = () => {
               setTrips((prev) => [t, ...prev]);
             }
           } catch (e) {}
+        }}
+        editingTrip={editingTrip}
+        onUpdated={handleUpdateTrip}
+      />
+      <ImportTripsModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        vehicleId={selectedVehicleId || ''}
+        onImported={() => {
+          // Refresh trips list after import
+          fetchTrips();
         }}
       />
     </Box>

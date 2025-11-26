@@ -45,10 +45,12 @@ export interface Vehicle {
   batteryCapacity: number;
   registrationNumber: string;
   createdAt: string;
+  trips?: Trip[];
 }
 
 export interface Trip {
   id: string;
+  tripIndex: number; // Index of the trip in the vehicle's trips array
   vehicleId: string;
   userId: string;
   startTime: string;
@@ -122,7 +124,7 @@ export interface Order {
   listingId: string;
   quantity: number;
   totalAmount: number;
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED' | 'CANCELLED';
   createdAt: string;
 }
 

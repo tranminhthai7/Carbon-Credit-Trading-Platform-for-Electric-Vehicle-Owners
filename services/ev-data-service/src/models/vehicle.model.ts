@@ -15,8 +15,8 @@ export interface IVehicle {
   trips: ITrip[];
   total_distance_km: number;
   total_co2_saved_kg: number;
-    import_keys?: { key: string; added_at: Date }[];
-    credit_request_keys?: { key: string; added_at: Date }[];
+  import_keys?: { key: string; added_at: Date }[];
+  credit_request_keys?: { key: string; added_at: Date }[];
 }
 
 // Mongoose Schema
@@ -53,11 +53,12 @@ const vehicleSchema = new Schema<IVehicle>(
     },
     license_plate: {
       type: String,
-      required: [true, 'License plate is required'],
+      required: false, // Temporarily allow null for cleanup
       trim: true,
       uppercase: true,
-      unique: true,
+      sparse: true, // Allow multiple null values
       maxlength: [20, 'License plate cannot exceed 20 characters'],
+      unique: false, // Explicitly disable unique constraint
     },
     vin: {
       type: String,

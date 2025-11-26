@@ -20,15 +20,33 @@ export async function createOrder(buyerId: string, sellerId: string, amount: num
   return saved;
 }
 
-export async function getAllOrders() {
+export async function getOrdersByUser(userId: string) {
   const repo = orderRepo();
-  return repo.find();
+  const orders = await repo.find({ where: { buyerId: userId } });
+  // Map totalPrice to totalAmount for frontend compatibility
+  return orders.map(order => ({
+    ...order,
+    totalAmount: order.totalPrice,
+    quantity: order.amount, // also map amount to quantity
+  }));
 }
 
-export async function updateOrderStatus(orderId: string, status: "COMPLETED" | "CANCELLED") {
+export async function getOrdersBySeller(userId: string) {
+  const repo = orderRepo();
+  const orders = await repo.find({ where: { sellerId: userId } });
+  // Map totalPrice to totalAmount for frontend compatibility
+  return orders.map(order => ({
+    ...order,
+    totalAmount: order.totalPrice,
+    quantity: order.amount, // also map amount to quantity
+  }));
+}
+
+export async function updateOrderStatus(orderId: string, status: "ACCEPTED" | "REJECTED" | "COMPLETED" | "CANCELLED", userId?: string) {
   const repo = orderRepo();
   const order = await repo.findOneBy({ id: orderId });
   if (!order) throw new Error("Order not found");
+  if (userId && order.sellerId !== userId) throw new Error("Unauthorized: Only seller can update order status");
   order.status = status;
   const saved = await repo.save(order);
   try {

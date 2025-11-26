@@ -49,7 +49,10 @@ export const OrdersPage: React.FC = () => {
       renderCell: (params: any) => {
         const status = params.value as string;
         const color =
-          status === 'COMPLETED' ? 'success' : status === 'PENDING' ? 'warning' : 'error';
+          status === 'COMPLETED' ? 'success' :
+          status === 'ACCEPTED' ? 'primary' :
+          status === 'PENDING' ? 'warning' :
+          status === 'REJECTED' ? 'error' : 'default';
         return <Chip label={status} color={color} size="small" />;
       },
     },

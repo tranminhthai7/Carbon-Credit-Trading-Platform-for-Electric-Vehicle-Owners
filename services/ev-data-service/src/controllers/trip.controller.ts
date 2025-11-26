@@ -347,20 +347,21 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
     const trips: any[] = [];
     for (const v of vehicles) {
       const vehicleId = (v as any)._id?.toString?.() || (v as any)._id;
-      for (const t of v.trips || []) {
+      (v.trips || []).forEach((t: any, index: number) => {
         trips.push({
-          id: (t as any)._id?.toString?.() || undefined,
+          id: `${vehicleId}_${index}`, // Create a unique ID using vehicleId + index
+          tripIndex: index, // Add trip index for delete/update operations
           vehicleId,
           userId,
           startTime: t.start_time,
           endTime: t.end_time,
           distance: t.distance_km,
-          energyConsumed: (t as any).energy_consumed ?? (t as any).energyConsumed ?? null,
+          energyConsumed: t.energy_consumed ?? t.energyConsumed ?? (t.distance_km ? Math.round(t.distance_km * 0.5 * 10) / 10 : null),
           carbonSaved: t.co2_saved_kg,
           verificationStatus: 'UNVERIFIED', // Will be updated below
           createdAt: t.created_at,
         });
-      }
+      });
     }
 
     // Get verification statuses from verification service
@@ -373,7 +374,7 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
       });
 
       if (verificationResponse.ok) {
-        const verifications = await verificationResponse.json();
+        const verifications = await verificationResponse.json() as any[];
         
         // Map verification status to trips
         trips.forEach(trip => {
@@ -859,6 +860,7 @@ export const importTrips = async (req: any, res: any): Promise<void> => {
         start_time: new Date(start_time),
         end_time: new Date(end_time),
         distance_km: Number(distance_km),
+        energy_consumed: t.energy_consumed ?? null,
         co2_saved_kg: Number(distance_km) * CO2_SAVED_PER_KM,
         start_location: t.start_location,
         end_location: t.end_location,
@@ -878,5 +880,218 @@ export const importTrips = async (req: any, res: any): Promise<void> => {
   } catch (err: any) {
     console.error('importTrips error:', err);
     res.status(500).json({ success: false, message: err.message || 'Failed to import trips' });
+  }
+};
+
+/**
+ * @route   DELETE /api/vehicles/:vehicleId/trips/:tripIndex
+ * @desc    Delete a trip from a vehicle
+ * @access  Private (JWT required)
+ */
+export const deleteTrip = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { vehicleId, tripIndex } = req.params;
+    const userId = (req as any).user?.id;
+
+    console.log('deleteTrip called with:', { vehicleId, tripIndex, userId });
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
+    // Find vehicle by ID and user_id
+    const vehicle = await Vehicle.findOne({
+      _id: vehicleId,
+      user_id: userId,
+    });
+
+    console.log('Found vehicle:', vehicle ? { id: vehicle._id, tripsCount: vehicle.trips?.length } : 'null');
+
+    if (!vehicle) {
+      res.status(404).json({
+        success: false,
+        message: 'Vehicle not found or you do not have permission to access it',
+      });
+      return;
+    }
+
+    const tripIdx = parseInt(tripIndex);
+    console.log('Parsed tripIndex:', tripIdx, 'vehicle trips length:', vehicle.trips?.length);
+
+    if (isNaN(tripIdx) || tripIdx < 0 || tripIdx >= vehicle.trips.length) {
+      console.log('Invalid trip index');
+      res.status(404).json({
+        success: false,
+        message: 'Trip not found',
+      });
+      return;
+    }
+
+    // Get the trip to be deleted for CO2 calculation
+    const deletedTrip = vehicle.trips[tripIdx];
+
+    // Remove trip from array
+    vehicle.trips.splice(tripIdx, 1);
+
+    // Update totals
+    vehicle.total_distance_km = Math.max(0, (vehicle.total_distance_km || 0) - (deletedTrip.distance_km || 0));
+    vehicle.total_co2_saved_kg = Math.max(0, (vehicle.total_co2_saved_kg || 0) - (deletedTrip.co2_saved_kg || 0));
+
+    // Save vehicle
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Trip deleted successfully',
+      data: {
+        deleted_trip: deletedTrip,
+        vehicle_totals: {
+          total_trips: vehicle.trips.length,
+          total_distance_km: vehicle.total_distance_km,
+          total_co2_saved_kg: vehicle.total_co2_saved_kg,
+        },
+      },
+    });
+  } catch (err: any) {
+    console.error('deleteTrip error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to delete trip' });
+  }
+};
+
+/**
+ * @route   PUT /api/vehicles/:vehicleId/trips/:tripIndex
+ * @desc    Update a trip in a vehicle
+ * @access  Private (JWT required)
+ */
+export const updateTrip = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { vehicleId, tripIndex } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
+    // Normalize payload to accept either camelCase or snake_case from clients
+    const normalized = {
+      start_time: req.body.start_time ?? req.body.startTime,
+      end_time: req.body.end_time ?? req.body.endTime,
+      distance_km: req.body.distance_km ?? req.body.distance ?? req.body.distanceKm,
+      start_location: req.body.start_location ?? req.body.startLocation,
+      end_location: req.body.end_location ?? req.body.endLocation,
+      notes: req.body.notes ?? req.body.note ?? undefined,
+      energy_consumed: req.body.energy_consumed ?? req.body.energyConsumed ?? undefined,
+    };
+
+    // Find vehicle by ID and user_id
+    const vehicle = await Vehicle.findOne({
+      _id: vehicleId,
+      user_id: userId,
+    });
+
+    if (!vehicle) {
+      res.status(404).json({
+        success: false,
+        message: 'Vehicle not found or you do not have permission to access it',
+      });
+      return;
+    }
+
+    const tripIdx = parseInt(tripIndex);
+    if (isNaN(tripIdx) || tripIdx < 0 || tripIdx >= vehicle.trips.length) {
+      res.status(404).json({
+        success: false,
+        message: 'Trip not found',
+      });
+      return;
+    }
+
+    // Get the old trip for comparison
+    const oldTrip = vehicle.trips[tripIdx];
+
+    // Validate and prepare new trip data
+    const distanceKm = Number(normalized.distance_km);
+    if (isNaN(distanceKm) || distanceKm < 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: [{ field: 'distance_km', message: 'distance_km must be a non-negative number' }],
+      });
+      return;
+    }
+
+    // Validate start/end times
+    const startTime = new Date(normalized.start_time);
+    const endTime = new Date(normalized.end_time);
+    if (Number.isNaN(startTime.getTime()) || Number.isNaN(endTime.getTime())) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: [{ field: 'start_time|end_time', message: 'Invalid date format' }],
+      });
+      return;
+    }
+    if (startTime > endTime) {
+      res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: [{ field: 'start_time|end_time', message: 'start_time must be before end_time' }],
+      });
+      return;
+    }
+
+    // Calculate new CO2 saved
+    const newCo2Saved = parseFloat((distanceKm * CO2_SAVED_PER_KM).toFixed(3));
+
+    // Update trip
+    const updatedTrip = {
+      ...oldTrip,
+      start_time: startTime,
+      end_time: endTime,
+      distance_km: distanceKm,
+      energy_consumed: normalized.energy_consumed ?? oldTrip.energy_consumed ?? null,
+      co2_saved_kg: newCo2Saved,
+      start_location: normalized.start_location ?? oldTrip.start_location,
+      end_location: normalized.end_location ?? oldTrip.end_location,
+      notes: normalized.notes ?? oldTrip.notes,
+      updated_at: new Date(),
+    };
+
+    // Replace trip in array
+    vehicle.trips[tripIdx] = updatedTrip as any;
+
+    // Update vehicle totals
+    const oldCo2Saved = oldTrip.co2_saved_kg || 0;
+    const oldDistance = oldTrip.distance_km || 0;
+
+    vehicle.total_distance_km = (vehicle.total_distance_km || 0) - oldDistance + distanceKm;
+    vehicle.total_co2_saved_kg = (vehicle.total_co2_saved_kg || 0) - oldCo2Saved + newCo2Saved;
+
+    // Save vehicle
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Trip updated successfully',
+      data: {
+        trip: updatedTrip,
+        vehicle_totals: {
+          total_trips: vehicle.trips.length,
+          total_distance_km: vehicle.total_distance_km,
+          total_co2_saved_kg: vehicle.total_co2_saved_kg,
+        },
+      },
+    });
+  } catch (err: any) {
+    console.error('updateTrip error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to update trip' });
   }
 };

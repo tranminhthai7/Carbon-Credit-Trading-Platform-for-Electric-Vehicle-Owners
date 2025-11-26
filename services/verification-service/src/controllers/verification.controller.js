@@ -46,40 +46,22 @@ class VerificationController {
                 });
             }
         };
-
-        // Dashboard helpers (instance-bound so `this` resolves correctly when used as route handlers)
-        this.getStats = async (req, res) => {
+        // Get verifications for a specific user
+        this.getUserVerifications = async (req, res) => {
             try {
-                const total = await this.verificationRepository.count();
-                const approved = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.APPROVED } });
-                const rejected = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.REJECTED } });
-                const pending = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.PENDING } });
-
-                res.set('Cache-Control', 'no-cache');
-                res.json({
-                    total,
-                    approved,
-                    rejected,
-                    pending
+                const { userId } = req.params;
+                const verifications = await this.verificationRepository.find({
+                    where: { user_id: userId },
+                    order: { created_at: 'DESC' }
                 });
-            } catch (error) {
-                console.error('Get stats error:', error);
-                res.status(500).json({ success: false, message: 'Failed to get verification statistics' });
+                res.json(verifications);
             }
-        };
-
-        this.getRecentActivities = async (req, res) => {
-            try {
-                const recentVerifications = await this.verificationRepository.find({
-                    order: { updated_at: 'DESC' },
-                    take: 10
+            catch (error) {
+                console.error('Get user verifications error:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to get user verifications'
                 });
-
-                res.set('Cache-Control', 'no-cache');
-                res.json(recentVerifications);
-            } catch (error) {
-                console.error('Get recent activities error:', error);
-                res.status(500).json({ success: false, message: 'Failed to get recent verification activities' });
             }
         };
         // Duyệt verification và cấp credits
@@ -277,22 +259,6 @@ class VerificationController {
         this.verifyCredits = async (req, res) => {
             try {
                 const { user_id, vehicle_id, co2_amount, trips_count, emission_data, trip_details } = req.body;
-                // Check for recent pending verification to prevent spam
-                const recentVerification = await this.verificationRepository.findOne({
-                    where: {
-                        user_id,
-                        vehicle_id,
-                        status: Verification_1.VerificationStatus.PENDING
-                    },
-                    order: { created_at: 'DESC' }
-                });
-                if (recentVerification) {
-                    res.status(400).json({
-                        success: false,
-                        message: 'You already have a pending verification for this vehicle'
-                    });
-                    return;
-                }
                 const verification = new Verification_1.Verification();
                 verification.id = (0, uuid_1.v4)();
                 verification.user_id = user_id;
@@ -451,7 +417,8 @@ class VerificationController {
                     res.status(401).json({ success: false, message: 'Not authenticated' });
                     return;
                 }
-                const certificates = await this.certificateRepository.find({ where: { user_id: userId }, order: { issued_at: 'DESC' } });
+                const allCertificates = await this.certificateRepository.find();
+                const certificates = allCertificates.filter(c => c.user_id === userId);
                 res.json({ success: true, data: { certificates, total: certificates.length } });
             }
             catch (error) {
@@ -616,12 +583,45 @@ class VerificationController {
                 });
             }
         };
+        // Get verification statistics for dashboard
+        this.getStats = async (req, res) => {
+            try {
+                const total = await this.verificationRepository.count();
+                const approved = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.APPROVED } });
+                const rejected = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.REJECTED } });
+                const pending = await this.verificationRepository.count({ where: { status: Verification_1.VerificationStatus.PENDING } });
+                res.json({
+                    total,
+                    approved,
+                    rejected,
+                    pending
+                });
+            }
+            catch (error) {
+                console.error('Get stats error:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to get verification statistics'
+                });
+            }
+        };
+        // Get recent verification activities
+        this.getRecentActivities = async (req, res) => {
+            try {
+                const recentVerifications = await this.verificationRepository.find({
+                    order: { updated_at: 'DESC' },
+                    take: 10
+                });
+                res.json(recentVerifications);
+            }
+            catch (error) {
+                console.error('Get recent activities error:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to get recent verification activities'
+                });
+            }
+        };
     }
 }
 exports.VerificationController = VerificationController;
-
-// Ensure runtime compatibility when .js artifacts are loaded directly
-// (some environments load .js instead of .ts). Add missing prototype methods
-// that are present in the TypeScript source so routes referencing them
-// aren't undefined during startup.
-// Prototype fallbacks removed — methods are provided on the instance to preserve `this`.

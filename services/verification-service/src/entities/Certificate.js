@@ -25,11 +25,11 @@ __decorate([
     __metadata("design:type", String)
 ], Certificate.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('varchar'),
     __metadata("design:type", String)
 ], Certificate.prototype, "user_id", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid', { nullable: true }),
+    (0, typeorm_1.Column)('varchar', { nullable: true }),
     __metadata("design:type", String)
 ], Certificate.prototype, "verification_id", void 0);
 __decorate([
@@ -64,11 +64,11 @@ __decorate([
     __metadata("design:type", String)
 ], Certificate.prototype, "certificate_url", void 0);
 __decorate([
-    (0, typeorm_1.Column)('uuid'),
+    (0, typeorm_1.Column)('varchar'),
     __metadata("design:type", String)
 ], Certificate.prototype, "issued_by", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)(),
+    (0, typeorm_1.Column)('timestamp'),
     __metadata("design:type", Date)
 ], Certificate.prototype, "issued_at", void 0);
 __decorate([

@@ -75,9 +75,10 @@ export const marketplaceService = {
   },
 
   // Purchase a listing (create order)
-  purchaseListing: async (listingId: string, buyerId: string): Promise<Order> => {
+  purchaseListing: async (listingId: string, buyerId: string, quantity: number): Promise<Order> => {
     const response = await apiClient.post<Order>(`/api/listings/${listingId}/purchase`, {
       buyerId,
+      quantity,
     });
     return response.data;
   },
@@ -85,6 +86,21 @@ export const marketplaceService = {
   // Get user's orders (for buyers)
   getMyOrders: async (): Promise<Order[]> => {
     const response = await apiClient.get<Order[]>('/api/orders');
+    return response.data;
+  },
+
+  // Get seller's orders (for sellers)
+  getSellerOrders: async (): Promise<Order[]> => {
+    const response = await apiClient.get<Order[]>('/api/orders/seller');
+    return response.data;
+  },
+
+  // Update order status (for sellers)
+  updateOrderStatus: async (orderId: string, status: string): Promise<Order> => {
+    const response = await apiClient.post<Order>('/api/orders/update', {
+      orderId,
+      status,
+    });
     return response.data;
   },
 };

@@ -13,7 +13,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     username: env_1.envConfig.DB_USERNAME,
     password: env_1.envConfig.DB_PASSWORD,
     database: env_1.envConfig.DB_NAME,
-    synchronize: env_1.envConfig.NODE_ENV !== 'production',
+    synchronize: false, // temporarily disable sync
     logging: env_1.envConfig.NODE_ENV === 'development',
     entities: [Payment_1.Payment, Escrow_1.Escrow, Withdrawal_1.Withdrawal],
     migrations: ['src/migrations/*.ts'],

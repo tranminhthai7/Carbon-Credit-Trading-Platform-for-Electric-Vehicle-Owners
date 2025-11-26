@@ -9,37 +9,48 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Wallet = void 0;
-//Wallet.ts
+exports.Listing = void 0;
+//Listing.ts
+console.log("Listing entity loaded", __filename);
 const typeorm_1 = require("typeorm");
-const Transaction_1 = require("./Transaction");
-let Wallet = class Wallet {
+/**
+ * Listing: Một bài đăng bán tín chỉ carbon
+ * - userId: người đăng bán
+ * - amount: số credits (tons CO2)
+ * - pricePerCredit: giá 1 credit (USD)
+ * - status: OPEN | SOLD
+ */
+let Listing = class Listing {
 };
-exports.Wallet = Wallet;
+exports.Listing = Listing;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
     __metadata("design:type", String)
-], Wallet.prototype, "id", void 0);
+], Listing.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], Wallet.prototype, "userId", void 0);
+], Listing.prototype, "userId", void 0);
 __decorate([
-    (0, typeorm_1.Column)('double precision', { default: 0 }),
+    (0, typeorm_1.Column)("double precision"),
     __metadata("design:type", Number)
-], Wallet.prototype, "balance", void 0);
+], Listing.prototype, "amount", void 0);
+__decorate([
+    (0, typeorm_1.Column)("double precision"),
+    __metadata("design:type", Number)
+], Listing.prototype, "pricePerCredit", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: "OPEN" }),
+    __metadata("design:type", String)
+], Listing.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
-], Wallet.prototype, "createdAt", void 0);
+], Listing.prototype, "created_at", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => Transaction_1.Transaction, (tx) => tx.fromWallet),
-    __metadata("design:type", Array)
-], Wallet.prototype, "outgoing", void 0);
-__decorate([
-    (0, typeorm_1.OneToMany)(() => Transaction_1.Transaction, (tx) => tx.toWallet),
-    __metadata("design:type", Array)
-], Wallet.prototype, "incoming", void 0);
-exports.Wallet = Wallet = __decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], Listing.prototype, "updated_at", void 0);
+exports.Listing = Listing = __decorate([
     (0, typeorm_1.Entity)()
-], Wallet);
+], Listing);

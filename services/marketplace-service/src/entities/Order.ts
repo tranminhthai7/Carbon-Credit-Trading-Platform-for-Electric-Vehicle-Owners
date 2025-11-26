@@ -19,7 +19,7 @@ export class Order {
   totalPrice!: number; // amount * pricePerCredit
 
   @Column({ default: "PENDING" })
-  status!: "PENDING" | "COMPLETED" | "CANCELLED";
+  status!: "PENDING" | "ACCEPTED" | "REJECTED" | "COMPLETED" | "CANCELLED";
 
   // store listing id rather than entity relation to avoid metadata bootstrap
   @Column()

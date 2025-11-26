@@ -11,7 +11,7 @@ export const AppDataSource = new DataSource({
     username: envConfig.DB_USERNAME,
     password: envConfig.DB_PASSWORD,
     database: envConfig.DB_NAME,
-    synchronize: envConfig.NODE_ENV !== 'production',
+    synchronize: false, // temporarily disable sync
     logging: envConfig.NODE_ENV === 'development',
     entities: [Payment, Escrow, Withdrawal],
     migrations: ['src/migrations/*.ts'],

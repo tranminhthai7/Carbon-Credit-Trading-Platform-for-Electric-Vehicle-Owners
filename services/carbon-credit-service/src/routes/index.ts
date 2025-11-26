@@ -17,7 +17,7 @@ router.post('/calculate/co2', calculateCO2);
 router.post('/wallet/create', authMiddleware, createWalletHandler);
 router.get('/wallet/:userId', authMiddleware, getWalletHandler);
 router.post('/wallet/mint', authMiddleware, mintHandler);
-router.post('/wallet/transfer', authMiddleware, transferHandler);
+router.post('/wallet/transfer', transferHandler);
 router.post('/wallet/credits/issue', authMiddleware, issueCreditsHandler);
 
 // Credit requests

@@ -13,7 +13,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     username: env_1.envConfig.DB_USERNAME,
     password: env_1.envConfig.DB_PASSWORD,
     database: env_1.envConfig.DB_NAME,
-    synchronize: env_1.envConfig.NODE_ENV !== 'production',
+    synchronize: false, // Temporarily disabled to prevent schema sync issues
     logging: env_1.envConfig.NODE_ENV === 'development',
     entities: [Verification_1.Verification, KYC_1.KYC, Certificate_1.Certificate],
 });

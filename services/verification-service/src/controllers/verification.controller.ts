@@ -121,6 +121,8 @@ export class VerificationController {
             certificate.credits_amount = verification.credits_issued;
             certificate.description = `Carbon Credit Certificate for ${verification.co2_amount}kg CO2 reduction`;
             certificate.issued_by = cva_id;
+            certificate.issued_at = new Date(Date.now());
+            console.log('Certificate issued_at:', certificate.issued_at, 'Type:', typeof certificate.issued_at, 'ISOString:', certificate.issued_at.toISOString());
 
             await this.certificateRepository.save(certificate);
 
@@ -462,7 +464,8 @@ export class VerificationController {
                 res.status(401).json({ success: false, message: 'Not authenticated' });
                 return;
             }
-            const certificates = await this.certificateRepository.find({ where: { user_id: userId } });
+            const allCertificates = await this.certificateRepository.find();
+            const certificates = allCertificates.filter(c => c.user_id === userId);
             res.json({ success: true, data: { certificates, total: certificates.length } });
         } catch (error) {
             console.error('Get certificates for current user error:', error);

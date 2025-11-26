@@ -315,6 +315,11 @@ services:
       - /app/node_modules
     command: npm run dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Marketplace Service
   marketplace-service:
@@ -394,6 +399,11 @@ services:
       - /app/node_modules
     command: npm run dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Verification Service
   verification-service:
@@ -419,7 +429,7 @@ services:
       USER_SERVICE_URL: http://user-service:3001
       CARBON_CREDIT_SERVICE_URL: http://carbon-credit-service:3003
       EV_DATA_SERVICE_URL: http://ev-data-service:3002
-      WALLET_SERVICE_URL: http://notification-service:3007
+      WALLET_SERVICE_URL: http://carbon-credit-service:3003
       API_SECRET_KEY: ${API_SECRET_KEY:-your_api_secret_key}
     ports:
       - "3006:3006"
@@ -477,6 +487,11 @@ services:
       - /app/node_modules
     command: npm run dev
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Reporting Service
   reporting-service:

@@ -27,9 +27,14 @@ export const tripService = {
     }));
   },
 
-  // Get trip by ID
-  getTripById: async (tripId: string): Promise<Trip> => {
-    const response = await apiClient.get<Trip>(`/api/vehicles/trips/${tripId}`);
+  // Delete a trip
+  deleteTrip: async (vehicleId: string, tripIndex: number): Promise<void> => {
+    await apiClient.delete(`/api/vehicles/${vehicleId}/trips/${tripIndex}`);
+  },
+
+  // Update a trip
+  updateTrip: async (vehicleId: string, tripIndex: number, tripData: Partial<Trip>): Promise<Trip> => {
+    const response = await apiClient.put<Trip>(`/api/vehicles/${vehicleId}/trips/${tripIndex}`, tripData);
     return response.data;
   },
 
@@ -94,6 +99,7 @@ export const tripService = {
       if (!t) return t;
       return {
         id: t.id ?? t._id ?? (t.trip?._id || undefined),
+        tripIndex: t.tripIndex ?? 0, // Default to 0 for newly created trips
         vehicleId: t.vehicleId ?? t.vehicle_id ?? payload.vehicleId ?? undefined,
         userId: t.userId ?? t.user_id ?? undefined,
         startTime: t.start_time ?? t.startTime,
@@ -221,4 +227,19 @@ export const vehicleService = {
   deleteVehicle: async (vehicleId: string): Promise<void> => {
     await apiClient.delete(`/api/vehicles/${vehicleId}`);
   },
+
+  // Import trips from CSV file
+  importTripsFromFile: async (vehicleId: string, file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post<any>(`/api/vehicles/${vehicleId}/trips/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  // Dummy method to force recompile
+  dummy: () => {},
 };

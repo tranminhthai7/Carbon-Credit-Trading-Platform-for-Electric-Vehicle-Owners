@@ -19,9 +19,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated?: (created: any) => void;
+  editingTrip?: any;
+  onUpdated?: (updated: any) => void;
 }
 
-export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
+export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated, editingTrip, onUpdated }) => {
   const [distance, setDistance] = useState('');
   const [energy, setEnergy] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -35,18 +37,26 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | undefined>(undefined);
 
   const reset = () => {
-    setDistance('');
-    setEnergy('');
-    setStartTime('');
-    setEndTime('');
-    setStartLocation('');
-    setEndLocation('');
-    setNotes('');
+    setDistance(editingTrip ? editingTrip.distance?.toString() || '' : '');
+    setEnergy(editingTrip ? editingTrip.energyConsumed?.toString() || '' : '');
+    setStartTime(editingTrip ? editingTrip.startTime || '' : '');
+    setEndTime(editingTrip ? editingTrip.endTime || '' : '');
+    setStartLocation(editingTrip ? editingTrip.startLocation?.address || '' : '');
+    setEndLocation(editingTrip ? editingTrip.endLocation?.address || '' : '');
+    setNotes(editingTrip ? editingTrip.notes || '' : '');
     setError(null);
     setLoading(false);
-    setVehicles([]);
-    setSelectedVehicleId(undefined);
+    if (!editingTrip) {
+      setVehicles([]);
+      setSelectedVehicleId(undefined);
+    }
   };
+
+  useEffect(() => {
+    if (open) {
+      reset();
+    }
+  }, [open, editingTrip]);
 
   const handleClose = () => {
     reset();
@@ -55,7 +65,7 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
 
   const onSubmit = async () => {
     setError(null);
-    if (!selectedVehicleId) {
+    if (!editingTrip && !selectedVehicleId) {
       setError('Please select a vehicle for this trip');
       return;
     }
@@ -77,13 +87,21 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
       startLocation: startLocation ? { address: startLocation } : undefined,
       endLocation: endLocation ? { address: endLocation } : undefined,
       notes: notes || undefined,
-      vehicleId: selectedVehicleId,
+      ...(editingTrip ? {} : { vehicleId: selectedVehicleId }),
     };
 
     try {
       setLoading(true);
-      const created = await tripService.createTrip(payload as any);
-      if (onCreated) onCreated(created);
+      if (editingTrip) {
+        // Update existing trip
+        if (onUpdated) {
+          await onUpdated(payload);
+        }
+      } else {
+        // Create new trip
+        const created = await tripService.createTrip(payload as any);
+        if (onCreated) onCreated(created);
+      }
       handleClose();
     } catch (err: any) {
       // Prefer server-side validation response if available
@@ -126,7 +144,7 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Record New Trip</DialogTitle>
+      <DialogTitle>{editingTrip ? 'Edit Trip' : 'Record New Trip'}</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
@@ -194,24 +212,29 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
             />
           </Grid>
 
+          {!editingTrip && (
+            <Grid item xs={12}>
+              <FormControl fullWidth sx={{ mb: 1 }}>
+                <InputLabel id="vehicle-select-label">Vehicle</InputLabel>
+                <Select
+                  labelId="vehicle-select-label"
+                  label="Vehicle"
+                  value={selectedVehicleId ?? ''}
+                  onChange={(e) => setSelectedVehicleId(e.target.value as string)}
+                >
+                  {vehicles.length === 0 ? (
+                    <MenuItem value="">No vehicles</MenuItem>
+                  ) : (
+                    vehicles.map((v) => (
+                      <MenuItem key={v.id} value={v.id}>{`${v.make || ''} ${v.model || ''} — ${v.registrationNumber || (v.license_plate ?? '')}`}</MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+          )}
+
           <Grid item xs={12}>
-            <FormControl fullWidth sx={{ mb: 1 }}>
-              <InputLabel id="vehicle-select-label">Vehicle</InputLabel>
-              <Select
-                labelId="vehicle-select-label"
-                label="Vehicle"
-                value={selectedVehicleId ?? ''}
-                onChange={(e) => setSelectedVehicleId(e.target.value as string)}
-              >
-                {vehicles.length === 0 ? (
-                  <MenuItem value="">No vehicles</MenuItem>
-                ) : (
-                  vehicles.map((v) => (
-                    <MenuItem key={v.id} value={v.id}>{`${v.make || ''} ${v.model || ''} — ${v.registrationNumber || (v.license_plate ?? '')}`}</MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
             <TextField
               label="Notes (optional)"
               value={notes}
@@ -226,7 +249,7 @@ export const RecordTripModal: React.FC<Props> = ({ open, onClose, onCreated }) =
       <DialogActions>
         <Button onClick={handleClose}>Cancel</Button>
         <Button onClick={onSubmit} variant="contained" disabled={loading}>
-          {loading ? 'Saving...' : 'Record Trip'}
+          {loading ? 'Saving...' : (editingTrip ? 'Update Trip' : 'Record Trip')}
         </Button>
       </DialogActions>
     </Dialog>

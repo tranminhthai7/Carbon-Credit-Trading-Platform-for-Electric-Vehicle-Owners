@@ -46,28 +46,32 @@ export async function getUserListings(userId: string) {
   return repo.find({ where: { userId } });
 }
 
-export async function buyListing(listingId: string, buyerId: string) {
+export async function buyListing(listingId: string, buyerId: string, quantity: number) {
   const repo = getListingRepo();
   const listing = await repo.findOneBy({ id: listingId });
 
   if (!listing) throw new Error("Listing not found");
   if (listing.status === "SOLD") throw new Error("Already sold");
+  if (quantity > listing.amount) throw new Error("Quantity exceeds available amount");
 
   // Transfer credits first
-  const transferResult: any = await transferCredits(listing.userId, buyerId, listing.amount);
+  const transferResult: any = await transferCredits(listing.userId, buyerId, quantity);
   if (!transferResult || transferResult.status < 200 || transferResult.status >= 300 || transferResult.data?.success === false) {
     throw new Error((transferResult && (transferResult.data?.message || transferResult.statusText)) || "Transfer failed");
   }
 
-  // Use DB transaction to mark listing as sold and create order atomically
+  // Use DB transaction to update listing and create order atomically
   const result = await AppDataSource.transaction(async (manager) => {
-    listing.status = "SOLD";
+    listing.amount -= quantity;
+    if (listing.amount === 0) {
+      listing.status = "SOLD";
+    }
     await manager.save(listing);
 
     const order = await createOrder(
       buyerId,
       listing.userId,
-      listing.amount,
+      quantity,
       listing.pricePerCredit,
       listing.id,
       manager

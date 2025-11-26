@@ -91,17 +91,7 @@ async function registerAndVerify(email, password, role = 'ev_owner') {
       console.warn('Register error (maybe exists):', err.response?.data || err.message);
     }
   }
-  // fetch verification token dev-only
-  try {
-    const tokenResp = await httpGet('/api/users/internal/last-verification-token');
-    const token = tokenResp.data?.token;
-    if (token) {
-      console.log('Found verification token, verifying', token);
-      await httpGet(`/api/users/verify/${token}`);
-    }
-  } catch (err) {
-    console.warn('No verification token or error fetching it:', err.response?.data || err.message);
-  }
+  // Skip verification for demo - users are active immediately
   // login
   const login2 = await httpPost('/api/users/login', { email, password });
   return login2.data;
@@ -116,7 +106,8 @@ async function createWalletAndMint(userId, amount = 100, token) {
       const walletOut = runPsql(CARBON_DB_CONTAINER, CARBON_DB_USER, CARBON_DB_NAME, walletSql, true);
       let walletId = parseIdFromPsql(walletOut);
       if (!walletId) {
-        // wallet exists, fetch id
+        // wallet exists, update balance
+        runPsql(CARBON_DB_CONTAINER, CARBON_DB_USER, CARBON_DB_NAME, `UPDATE wallet SET balance = ${amount} WHERE "userId"='${userId}'`);
         const existing = runPsql(CARBON_DB_CONTAINER, CARBON_DB_USER, CARBON_DB_NAME, `SELECT id FROM wallet WHERE "userId"='${userId}' LIMIT 1`, true);
         walletId = parseIdFromPsql(existing);
       }
@@ -200,8 +191,8 @@ async function run() {
 
     const seller = await registerAndVerify(sellerEmail, sellerPass, 'ev_owner');
     const buyer = await registerAndVerify(buyerEmail, buyerPass, 'buyer');
-    const admin = await registerAndVerify('admin@example.com', 'Admin123!', 'admin');
-    console.log('Seller', seller.user.id, 'Buyer', buyer.user.id, 'Admin', admin.user.id);
+    // const admin = await registerAndVerify('admin@example.com', 'Admin123!', 'admin');
+    console.log('Seller', seller.user.id, 'Buyer', buyer.user.id);
 
     // Create wallets & mint credits (seller should have credits to sell) — provide auth tokens
     await createWalletAndMint(seller.user.id, 100, seller.token);

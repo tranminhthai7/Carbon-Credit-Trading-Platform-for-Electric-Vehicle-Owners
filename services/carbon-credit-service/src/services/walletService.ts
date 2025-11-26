@@ -53,10 +53,13 @@ export async function transferCredits(fromUserId: string, toUserId: string, amou
   if (amount <= 0) throw new Error('Amount must be > 0');
 
   const from = await repo.findOneBy({ userId: fromUserId });
-  const to = await repo.findOneBy({ userId: toUserId });
+  let to = await repo.findOneBy({ userId: toUserId });
 
   if (!from) throw new Error('Sender wallet not found');
-  if (!to) throw new Error('Recipient wallet not found');
+  if (!to) {
+    // Create recipient wallet if it doesn't exist
+    to = await createWallet(toUserId);
+  }
 
   if (from.balance < amount) throw new Error('Insufficient balance');
 

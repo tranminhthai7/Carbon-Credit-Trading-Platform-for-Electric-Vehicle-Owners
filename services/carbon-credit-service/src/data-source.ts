@@ -14,7 +14,7 @@ export const AppDataSource = new DataSource({
   username: process.env.POSTGRES_USER || process.env.DB_USER || 'admin',
   password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD || 'secret123',
   database: process.env.POSTGRES_NAME || process.env.DB_NAME || 'carbon_credit_db',
-  synchronize: true, 
+  synchronize: false, // temporarily disable sync 
   logging: false,
   entities: [Wallet, Transaction, CreditRequest],
   subscribers: [],

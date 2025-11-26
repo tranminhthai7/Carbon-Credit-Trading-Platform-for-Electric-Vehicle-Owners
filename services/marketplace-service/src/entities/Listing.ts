@@ -32,5 +32,8 @@ export class Listing {
   status!: "OPEN" | "SOLD";
 
   @CreateDateColumn()
-  createdAt!: Date;
+  created_at!: Date;
+
+  @CreateDateColumn()
+  updated_at!: Date;
 }

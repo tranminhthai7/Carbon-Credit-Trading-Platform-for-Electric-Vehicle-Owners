@@ -44,9 +44,9 @@ export const createVehicleSchema = Joi.object({
   license_plate: Joi.string()
     .trim()
     .max(20)
-    .required()
+    .optional()
     .messages({
-      'string.empty': 'License plate is required',
+      'string.empty': 'License plate cannot be empty',
       'string.max': 'License plate cannot exceed 20 characters',
     }),
   
