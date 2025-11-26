@@ -462,7 +462,7 @@ export class VerificationController {
                 res.status(401).json({ success: false, message: 'Not authenticated' });
                 return;
             }
-            const certificates = await this.certificateRepository.find({ where: { user_id: userId }, order: { issued_at: 'DESC' } });
+            const certificates = await this.certificateRepository.find({ where: { user_id: userId } });
             res.json({ success: true, data: { certificates, total: certificates.length } });
         } catch (error) {
             console.error('Get certificates for current user error:', error);
