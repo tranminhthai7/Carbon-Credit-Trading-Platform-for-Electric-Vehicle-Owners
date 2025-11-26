@@ -11,7 +11,7 @@ export const AppDataSource = new DataSource({
     username: envConfig.DB_USERNAME,
     password: envConfig.DB_PASSWORD,
     database: envConfig.DB_NAME,
-    synchronize: envConfig.NODE_ENV !== 'production',
+    synchronize: false, // Temporarily disabled to prevent schema sync issues
     logging: envConfig.NODE_ENV === 'development',
     entities: [Verification, KYC, Certificate],
 });

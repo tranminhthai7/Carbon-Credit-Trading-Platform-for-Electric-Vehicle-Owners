@@ -12,10 +12,10 @@ export class Verification {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid')
+  @Column('varchar')
   user_id: string;
 
-  @Column('uuid')
+  @Column('varchar')
   vehicle_id: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
@@ -31,7 +31,7 @@ export class Verification {
   })
   status: VerificationStatus;
 
-  @Column('uuid', { nullable: true })
+  @Column('varchar', { nullable: true })
   cva_id: string; // CVA reviewer ID
 
   @Column('text', { nullable: true })

@@ -21,6 +21,9 @@ router.get('/recent', authMiddleware, requireRole(['cva']), verificationControll
 router.post('/approve', authMiddleware, requireRole(['cva']), validateApproval, verificationController.approveVerification);
 router.post('/reject', authMiddleware, requireRole(['cva']), validateRejection, verificationController.rejectVerification);
 
+// Get verifications for a user (for trip status mapping)
+router.get('/user/:userId', validateUserId, verificationController.getUserVerifications);
+
 // KYC Management
 router.post('/kyc/submit', authMiddleware, validateKYCSubmit, verificationController.submitKYC);
 router.get('/kyc/status/:userId', authMiddleware, validateUserId, verificationController.getKYCStatus);

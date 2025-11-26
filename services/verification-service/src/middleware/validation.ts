@@ -3,8 +3,8 @@ import Joi from 'joi';
 
 export const validateVerificationSubmit = (req: Request, res: Response, next: NextFunction): void => {
   const schema = Joi.object({
-    user_id: Joi.string().uuid().required(),
-    vehicle_id: Joi.string().uuid().required(),
+    user_id: Joi.string().required(),
+    vehicle_id: Joi.string().required(),
     co2_amount: Joi.number().positive().required(),
     trips_count: Joi.number().integer().positive().required(),
     emission_data: Joi.object().optional(),
@@ -56,8 +56,8 @@ export const validateKYCSubmit = (req: Request, res: Response, next: NextFunctio
 
 export const validateApproval = (req: Request, res: Response, next: NextFunction): void => {
   const schema = Joi.object({
-    verification_id: Joi.string().uuid().required(),
-    cva_id: Joi.string().uuid().required(),
+    verification_id: Joi.string().required(),
+    cva_id: Joi.string().required(),
     notes: Joi.string().max(1000).optional(),
     credits_amount: Joi.number().positive().optional()
   });
@@ -77,8 +77,8 @@ export const validateApproval = (req: Request, res: Response, next: NextFunction
 
 export const validateRejection = (req: Request, res: Response, next: NextFunction): void => {
   const schema = Joi.object({
-    verification_id: Joi.string().uuid().required(),
-    cva_id: Joi.string().uuid().required(),
+    verification_id: Joi.string().required(),
+    cva_id: Joi.string().required(),
     notes: Joi.string().min(10).max(1000).required()
   });
 
@@ -117,7 +117,7 @@ export const validateReportQuery = (req: Request, res: Response, next: NextFunct
 
 export const validateUserId = (req: Request, res: Response, next: NextFunction): void => {
   const schema = Joi.object({
-    userId: Joi.string().uuid().required()
+    userId: Joi.string().required()
   });
 
   const { error } = schema.validate(req.params);

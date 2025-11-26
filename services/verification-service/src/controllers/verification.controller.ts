@@ -47,6 +47,26 @@ export class VerificationController {
         }
     };
 
+    // Get verifications for a specific user
+    getUserVerifications = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { userId } = req.params;
+
+            const verifications = await this.verificationRepository.find({
+                where: { user_id: userId },
+                order: { created_at: 'DESC' }
+            });
+
+            res.json(verifications);
+        } catch (error) {
+            console.error('Get user verifications error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Failed to get user verifications'
+            });
+        }
+    };
+
     // Duyệt verification và cấp credits
     approveVerification = async (req: Request, res: Response): Promise<void> => {
         try {
@@ -266,24 +286,6 @@ export class VerificationController {
     verifyCredits = async (req: Request, res: Response): Promise<void> => {
         try {
             const { user_id, vehicle_id, co2_amount, trips_count, emission_data, trip_details } = req.body;
-
-            // Check for recent pending verification to prevent spam
-            const recentVerification = await this.verificationRepository.findOne({
-                where: { 
-                    user_id, 
-                    vehicle_id, 
-                    status: VerificationStatus.PENDING 
-                },
-                order: { created_at: 'DESC' }
-            });
-
-            if (recentVerification) {
-                res.status(400).json({
-                    success: false,
-                    message: 'You already have a pending verification for this vehicle'
-                });
-                return;
-            }
 
             const verification = new Verification();
             verification.id = uuidv4();
