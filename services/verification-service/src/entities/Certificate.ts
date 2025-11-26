@@ -44,7 +44,7 @@ export class Certificate {
   @Column('varchar')
   issued_by: string; // CVA ID
 
-  @CreateDateColumn()
+  @Column('timestamp')
   issued_at: Date;
 
   @Column('date', { nullable: true })
