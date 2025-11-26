@@ -10,11 +10,11 @@ export async function createListingHandler(req: Request, res: Response) {
     if (!userId) {
       return res.status(401).json({ error: "User not authenticated" });
     }
-    const { quantity, pricePerUnit } = req.body;
-    if (!quantity || !pricePerUnit) {
-      return res.status(400).json({ error: "quantity, pricePerUnit required" });
+    const { amount, pricePerCredit } = req.body;
+    if (!amount || !pricePerCredit) {
+      return res.status(400).json({ error: "amount, pricePerCredit required" });
     }
-    const listing = await listingService.createListing(userId, quantity, pricePerUnit);
+    const listing = await listingService.createListing(userId, amount, pricePerCredit);
     res.json(listing);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

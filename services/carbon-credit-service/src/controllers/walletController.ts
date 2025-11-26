@@ -30,9 +30,40 @@ export async function createWalletHandler(req: Request, res: Response) {
 export async function getWalletHandler(req: Request, res: Response) {
   try {
     const userId = req.params.userId;
-    const wallet = await walletService.getWalletByUserId(userId);
-    if (!wallet) return res.status(404).json({ error: 'Wallet not found' });
-    res.json(wallet);
+    let wallet = await walletService.getWalletByUserId(userId);
+    if (!wallet) {
+      // Create wallet if it doesn't exist
+      wallet = await walletService.createWallet(userId);
+    }
+
+    // Calculate totals from transactions
+    const incomingTotal = wallet.incoming?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+    const outgoingTotal = wallet.outgoing?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+
+    // Format response to match frontend expectations
+    const walletResponse = {
+      id: wallet.id,
+      userId: wallet.userId,
+      balance: Number(wallet.balance),
+      totalEarned: incomingTotal,
+      totalSpent: outgoingTotal,
+      createdAt: wallet.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: new Date().toISOString(), // Wallet entity doesn't have updatedAt
+      incoming: wallet.incoming?.map(tx => ({
+        id: tx.id,
+        amount: Number(tx.amount),
+        type: tx.type,
+        createdAt: tx.createdAt?.toISOString(),
+      })) || [],
+      outgoing: wallet.outgoing?.map(tx => ({
+        id: tx.id,
+        amount: Number(tx.amount),
+        type: tx.type,
+        createdAt: tx.createdAt?.toISOString(),
+      })) || [],
+    };
+
+    res.json(walletResponse);
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Internal error' });

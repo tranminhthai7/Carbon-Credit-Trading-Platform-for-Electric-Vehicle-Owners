@@ -13,7 +13,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || process.env.POSTGRES_USER || "admin",
   password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "secret123",
   database: process.env.DB_NAME || process.env.POSTGRES_NAME || "marketplace_db",
-  synchronize: true, // tự động sync DB khi chạy dev
+  synchronize: false, // tự động sync DB khi chạy dev
   logging: true,
   entities: entities,
 });

@@ -10,7 +10,8 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, refreshUser } = useAuth();
+  const [verifying, setVerifying] = React.useState(false);
   const location = useLocation();
 
   const isRoleAllowed = React.useMemo(() => {
@@ -21,7 +22,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     return allowedRoles.includes(user.role);
   }, [allowedRoles, user]);
 
-  if (loading) {
+  React.useEffect(() => {
+    // When we have a token in storage, always verify the session with the server
+    // before rendering protected content. This prevents a malicious/stale
+    // localStorage 'user' + 'token' combo from granting access without server validation.
+    const token = localStorage.getItem('token');
+    if (!loading && token) {
+      (async () => {
+        try {
+          setVerifying(true);
+          await refreshUser();
+        } finally {
+          setVerifying(false);
+        }
+      })();
+    }
+  }, [loading, refreshUser]);
+
+  if (loading || verifying) {
     return (
       <Box
         role="status"

@@ -4,6 +4,7 @@ import cors from "cors";
 import reportRoutes from "./routes/report.routes";
 import adminRoutes from "./routes/admin.routes";
 import analyticsRoutes from "./routes/analytics.routes";
+import settingsRoutes from "./routes/settings.routes";
 import { connectDB } from "./config/database";
 
 dotenv.config();
@@ -11,9 +12,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/api/reports", reportRoutes);
+app.use("/", reportRoutes);
 app.use("/admin", adminRoutes);
 app.use("/analytics", analyticsRoutes);
+app.use("/settings", settingsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -1,5 +1,5 @@
 //listingService.ts
-console.log("listingService loaded");
+console.log("LISTING SERVICE MODULE LOADED AT:", new Date().toISOString());
 
 import { transferCredits } from "../utils/apiClient";
 import { createOrder } from "./orderService";
@@ -7,11 +7,16 @@ import { AppDataSource } from "../db";
 import { Listing } from "../entities/Listing";
 
 console.log("AppDataSource imported:", !!AppDataSource);
+console.log("AppDataSource initialized:", AppDataSource?.isInitialized);
 
 export const test = () => "test";
 
 const getListingRepo = () => {
+  console.log("getListingRepo called at", new Date().toISOString());
+  console.log("AppDataSource instance:", AppDataSource);
   if (!AppDataSource) throw new Error("AppDataSource not initialized");
+  console.log("AppDataSource has metadata:", AppDataSource.hasMetadata(Listing));
+  console.log("AppDataSource entity metadatas:", AppDataSource.entityMetadatas.map(m => m.name));
   return AppDataSource.getRepository(Listing);
 };
 
@@ -32,7 +37,12 @@ export async function getListingById(listingId: string) {
 }
 
 export async function getUserListings(userId: string) {
+  console.log("=== getUserListings START ===");
+  console.log("getUserListings called with userId:", userId);
+  console.log("AppDataSource in getUserListings:", AppDataSource);
+  console.log("AppDataSource initialized in getUserListings:", AppDataSource?.isInitialized);
   const repo = getListingRepo();
+  console.log("repo:", repo);
   return repo.find({ where: { userId } });
 }
 

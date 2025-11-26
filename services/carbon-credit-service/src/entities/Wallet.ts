@@ -1,5 +1,5 @@
 //Wallet.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
 import { Transaction } from './Transaction';
 
 @Entity()
@@ -13,6 +13,9 @@ export class Wallet {
   // balance in carbon credits (1 credit = 1 ton CO2)
   @Column('double precision', { default: 0 })
   balance!: number;
+
+  @CreateDateColumn()
+  createdAt!: Date;
 
   @OneToMany(() => Transaction, (tx) => tx.fromWallet)
   outgoing!: Transaction[];

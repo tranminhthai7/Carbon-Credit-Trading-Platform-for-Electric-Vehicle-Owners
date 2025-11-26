@@ -8,7 +8,10 @@ const txRepo = () => AppDataSource.getRepository(Transaction);
 
 export async function createWallet(userId: string) {
   const repo = walletRepo();
-  let existing = await repo.findOneBy({ userId });
+  let existing = await repo.findOne({
+    where: { userId },
+    relations: ['incoming', 'outgoing']
+  });
   if (existing) return existing;
   const wallet = repo.create({ userId, balance: 0 });
   return repo.save(wallet);
@@ -16,7 +19,10 @@ export async function createWallet(userId: string) {
 
 export async function getWalletByUserId(userId: string) {
   const repo = walletRepo();
-  return repo.findOneBy({ userId });
+  return repo.findOne({
+    where: { userId },
+    relations: ['incoming', 'outgoing']
+  });
 }
 
 export async function mintCredits(userId: string, amount: number) {

@@ -20,10 +20,10 @@ app.get("/health", (_, res) => res.json({ status: "ok" }));
 // Initialize DataSource dynamically
 async function initializeApp() {
   try {
-    // Import entities directly to ensure they are loaded
-    const { Listing } = await import("./entities/Listing");
-    const { Order } = await import("./entities/Order");
-    const { Bid } = await import("./entities/Bid");
+    // Ensure entities are loaded before DataSource initialization
+    console.log("Listing entity:", typeof Listing);
+    console.log("Order entity:", typeof Order);
+    console.log("Bid entity:", typeof Bid);
 
     const AppDataSource = new DataSource({
       type: "postgres",
@@ -33,13 +33,23 @@ async function initializeApp() {
       password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || "secret123",
       database: process.env.DB_NAME || process.env.POSTGRES_NAME || "marketplace_db",
       synchronize: true,
+      dropSchema: false,
       logging: true,
       entities: [Listing, Order, Bid],
     });
 
+    console.log("DataSource entities:", AppDataSource.options.entities);
+
     await AppDataSource.initialize();
     setAppDataSource(AppDataSource);
+    
+    console.log("Setting AppDataSource at", new Date().toISOString());
+    console.log("After init - AppDataSource entity metadatas:", AppDataSource.entityMetadatas.map(m => m.name));
+    console.log("Has Listing metadata:", AppDataSource.hasMetadata(Listing));
+    
     console.log("Marketplace DB connected!");
+    console.log("AppDataSource set:", !!AppDataSource);
+    console.log("AppDataSource initialized:", AppDataSource.isInitialized);
 
     // Register routes after DataSource is initialized so controllers/services
     // which depend on AppDataSource can import safely. Import routes dynamically

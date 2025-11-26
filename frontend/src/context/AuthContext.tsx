@@ -83,17 +83,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         setLoading(true);
 
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-          setStoredUser(currentUser);
-          setLastUpdatedAt(Date.now());
-          return;
-        }
-
-        // No parsed user in memory, but there might still be a token saved.
-        // If we have a token we attempt to pull the profile from the API.
         const token = localStorage.getItem('token');
+
+        // If we have a token we must verify it with the backend. Do NOT trust
+        // a localStorage user object alone — an attacker can craft data in
+        // localStorage. Always prefer to fetch a fresh profile when a token
+        // exists.
+        if (token) {
+          try {
+            const profile = await authService.getProfile();
+            handleSuccess(profile);
+            return;
+          } catch (e) {
+            // If profile fetch fails, try a refresh flow then re-check profile
+            // before giving up.
+            console.debug('[AuthProvider] initial profile fetch failed, attempting refresh', e);
+            try {
+              const refreshed = await authService.refresh();
+              if (refreshed && refreshed.user) {
+                handleSuccess(refreshed.user);
+                return;
+              }
+            } catch (refreshErr) {
+              console.debug('[AuthProvider] token refresh failed during init', refreshErr);
+              // token is invalid or refresh failed - we'll fall through and
+              // clear any stored user below.
+            }
+          }
+        }
         if (token) {
           try {
             const profile = await authService.getProfile();
@@ -120,9 +137,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
 
-        if (storedUser) {
-          setUser(storedUser);
-          setLastUpdatedAt(Date.now());
+        // If we didn't return earlier above then either there is no token or
+        // the token/refresh checks failed. If storedUser exists without a
+        // verified token we must not treat it as authenticated.
+        if (storedUser && !token) {
+          removeStoredUser();
+        }
+        // If token exists but validation failed, clear stale data
+        if (token && !user) {
+          localStorage.removeItem('token');
+          removeStoredUser();
         }
       } finally {
         setLoading(false);
@@ -136,8 +160,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (storedUser === null) {
       return;
     }
-    setUser(storedUser);
-  }, [storedUser]);
+    const token = localStorage.getItem('token');
+    if (token) {
+      setUser(storedUser);
+    } else {
+      // remove stale stored user if token not present
+      removeStoredUser();
+    }
+  }, [setStoredUser]);
 
   const handleSuccess = useCallback(
     (nextUser: User) => {
@@ -250,7 +280,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       refreshUser,
       clearError,
-      isAuthenticated: !!user,
+      // Only treat the session as authenticated when both a user object and
+      // a valid token are present. This prevents simple localStorage tampering
+      // from granting access to protected routes.
+      isAuthenticated: !!user && !!localStorage.getItem('token'),
       hasRole,
       hasAnyRole,
       lastUpdatedAt,

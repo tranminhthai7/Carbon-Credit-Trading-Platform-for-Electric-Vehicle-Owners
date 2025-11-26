@@ -1,4 +1,5 @@
 //Listing.ts
+console.log("Listing entity loaded", __filename);
 import {
   Entity,
   PrimaryGeneratedColumn,

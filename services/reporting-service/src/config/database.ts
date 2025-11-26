@@ -5,6 +5,10 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/carbon_marketplace";
 
+// EV Data MongoDB connection
+const EV_MONGODB_URI = process.env.EV_MONGODB_URI || "mongodb://admin:secret123@ev-mongodb:27017/ev_data_db?authSource=admin";
+let evMongoose: typeof mongoose | null = null;
+
 // PostgreSQL connections for cross-service queries
 const userDbPool = new Pool({
   host: process.env.USER_DB_HOST || 'user-db',
@@ -55,6 +59,10 @@ export const connectDB = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log("Reporting service connected to MongoDB");
 
+    // Connect to EV MongoDB
+    evMongoose = await mongoose.createConnection(EV_MONGODB_URI);
+    console.log("Reporting service connected to EV MongoDB");
+
     // Test PostgreSQL connections
     await Promise.all([
       userDbPool.query('SELECT 1'),
@@ -69,4 +77,4 @@ export const connectDB = async () => {
   }
 };
 
-export { userDbPool, carbonDbPool, marketplaceDbPool, paymentDbPool };
+export { userDbPool, carbonDbPool, marketplaceDbPool, paymentDbPool, evMongoose };

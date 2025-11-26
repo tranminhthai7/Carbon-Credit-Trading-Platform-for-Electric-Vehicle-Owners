@@ -5,6 +5,9 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 // import { query } from '../config/database';
 import { registerSchema, loginSchema } from '../validators/auth.validator';
 
+// In-memory store for registered users (for demo purposes)
+const registeredUsers = new Map<string, { id: string; email: string; password: string; role: string; full_name: string | null; phone: string | null; created_at: string }>();
+
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate input
@@ -17,21 +20,53 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       });
     }
 
-    // Mock response - skip database for now
-    const { email, role, full_name, phone } = value;
+    const { email, password, role, full_name, phone } = value;
+
+    // Check if user already exists
+    if (registeredUsers.has(email)) {
+      return res.status(409).json({
+        success: false,
+        message: 'User already exists'
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = {
       id: 'mock-' + Date.now(),
       email,
-      role: role.toUpperCase(),
+      password: hashedPassword,
+      role, // Keep role as is, don't uppercase
       full_name: full_name || null,
       phone: phone || null,
       created_at: new Date().toISOString()
     };
 
+    // Store user in memory
+    registeredUsers.set(email, user);
+
+    // Generate JWT token like login
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'default-secret',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' } as SignOptions
+    );
+
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      user
+      data: {
+        user: userWithoutPassword,
+        token
+      }
     });
   } catch (error) {
     next(error);
@@ -50,14 +85,57 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       });
     }
 
-    const { email } = value;
+    const { email, password } = value;
 
-    // Mock user - skip database for now
+    // Check hardcoded test users first
+    const validUsers: Record<string, { role: string; password: string }> = {
+      'admin@example.com': { role: 'admin', password: 'password123' },
+      'buyer@example.com': { role: 'buyer', password: 'password123' },
+      'owner@example.com': { role: 'ev_owner', password: 'password123' },
+      'cva@example.com': { role: 'cva', password: 'password123' },
+    };
+
+    let userRole: string;
+    let userId: string;
+    let userFullName: string;
+
+    if (validUsers[email]) {
+      // Test user
+      if (validUsers[email].password !== password) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      userRole = validUsers[email].role;
+      userId = 'mock-user-' + email.replace('@', '-').replace('.', '-');
+      userFullName = email.split('@')[0];
+    } else if (registeredUsers.has(email)) {
+      // Registered user
+      const registeredUser = registeredUsers.get(email)!;
+      const isPasswordValid = await bcrypt.compare(password, registeredUser.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      userRole = registeredUser.role;
+      userId = registeredUser.id;
+      userFullName = registeredUser.full_name || email.split('@')[0];
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Mock user
     const user = {
-      id: 'mock-user-' + Date.now(),
+      id: userId,
       email,
-      role: email.includes('admin') ? 'admin' : 'buyer',
-      full_name: email.split('@')[0],
+      role: userRole,
+      full_name: userFullName,
       phone: null
     };
 
