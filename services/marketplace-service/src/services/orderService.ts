@@ -4,6 +4,7 @@ import { publishEvent } from "../config/mq";
 import { Order } from "../entities/Order";
 import { Listing } from "../entities/Listing";
 import { transferCredits } from "../utils/apiClient";
+import axios from 'axios';
 
 const orderRepo = () => AppDataSource.getRepository('Order' as any);
 
@@ -90,6 +91,18 @@ export async function payOrder(orderId: string, userId: string) {
     await publishEvent('orders', { event: 'order.completed', data: saved });
   } catch (err) {
     console.error('Could not publish order.completed event', err);
+  }
+
+  // Send notification to buyer
+  try {
+    await axios.post('http://notification-service:3007/api/notifications/send', {
+      user_id: saved.buyerId,
+      title: 'Payment Successful',
+      message: `Your payment for ${saved.amount} carbon credits has been completed.`,
+      // fcmToken: 'token-from-db' // TODO: Get from user DB
+    });
+  } catch (err) {
+    console.error('Could not send notification', err);
   }
 
   return saved;

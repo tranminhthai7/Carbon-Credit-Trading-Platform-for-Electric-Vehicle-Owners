@@ -25,6 +25,7 @@
     "axios": "^1.13.2",
     "carbon-credit-ev-monorepo": "file:..",
     "date-fns": "^3.0.0",
+    "firebase": "^10.12.2",
     "puppeteer": "^24.31.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

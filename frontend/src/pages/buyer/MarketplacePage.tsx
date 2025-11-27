@@ -15,12 +15,14 @@ import {
   TextField,
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { marketplaceService } from '../../services/marketplace.service';
 import { useAuth } from '../../context/AuthContext';
 import { Listing } from '../../types';
 import { format } from 'date-fns';
 
 export const MarketplacePage: React.FC = () => {
+  const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -47,10 +49,12 @@ export const MarketplacePage: React.FC = () => {
     try {
       // backend expects buyerId in body — use current authenticated user id
       if (!user?.id) throw new Error('User not authenticated');
-      await marketplaceService.purchaseListing(selectedListing.id, user.id, Number(quantity));
+      const result = await marketplaceService.purchaseListing(selectedListing.id, user.id, Number(quantity));
       setSelectedListing(null);
       setQuantity('');
       fetchListings();
+      // Redirect to payment page with order id
+      navigate(`/buyer/payment?orderId=${result.id}`);
     } catch (error) {
       console.error('Failed to purchase:', error);
     }

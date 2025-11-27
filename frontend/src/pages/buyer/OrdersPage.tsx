@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Chip, CircularProgress } from '@mui/material';
+import { Box, Typography, Card, CardContent, Chip, CircularProgress, Button } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 import { marketplaceService } from '../../services/marketplace.service';
 import { Order } from '../../types';
 import { format } from 'date-fns';
 
 export const OrdersPage: React.FC = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,6 +24,11 @@ export const OrdersPage: React.FC = () => {
     };
     fetchOrders();
   }, []);
+
+  const handlePay = async (orderId: string) => {
+    console.log('Navigating to payment for order:', orderId);
+    navigate(`/buyer/payment?orderId=${orderId}`);
+  };
 
   const columns: GridColDef[] = [
     {
@@ -54,6 +61,26 @@ export const OrdersPage: React.FC = () => {
           status === 'PENDING' ? 'warning' :
           status === 'REJECTED' ? 'error' : 'default';
         return <Chip label={status} color={color} size="small" />;
+      },
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 150,
+      renderCell: (params: any) => {
+        const status = params.row.status;
+        if (status === 'PENDING') {
+          return (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => handlePay(params.row.id)}
+            >
+              Pay Now
+            </Button>
+          );
+        }
+        return null;
       },
     },
   ];

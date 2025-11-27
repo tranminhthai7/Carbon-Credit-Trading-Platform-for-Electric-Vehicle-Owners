@@ -1,13 +1,28 @@
 import { Request, Response } from 'express';
+import { sendFCMNotification } from '../firebase';
 
-// Gửi notification (ví dụ test)
-export const sendNotification = (req: Request, res: Response) => {
-  const { user_id, title, message } = req.body;
-  res.json({
-    success: true,
-    message: `Notification sent to user ${user_id}`,
-    data: { title, message },
-  });
+// Gửi notification (với FCM nếu có token)
+export const sendNotification = async (req: Request, res: Response) => {
+  const { user_id, title, message, fcmToken } = req.body;
+
+  try {
+    // Send FCM if token provided
+    if (fcmToken) {
+      await sendFCMNotification(fcmToken, title, message);
+    }
+
+    res.json({
+      success: true,
+      message: `Notification sent to user ${user_id}`,
+      data: { title, message },
+    });
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send notification',
+    });
+  }
 };
 
 // Lấy notifications theo user

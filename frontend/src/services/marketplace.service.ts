@@ -85,6 +85,12 @@ export const marketplaceService = {
     return response.data;
   },
 
+  // Get order by ID
+  getOrderById: async (orderId: string): Promise<Order> => {
+    const response = await apiClient.get<Order>(`/api/orders/${orderId}`);
+    return response.data;
+  },
+
   // Get user's orders (for buyers)
   getMyOrders: async (): Promise<Order[]> => {
     const response = await apiClient.get<Order[]>('/api/orders');
@@ -103,6 +109,12 @@ export const marketplaceService = {
       orderId,
       status,
     });
+    return response.data;
+  },
+
+  // Pay for an order
+  payOrder: async (orderId: string): Promise<Order> => {
+    const response = await apiClient.post<Order>('/api/orders/pay', { orderId });
     return response.data;
   },
 };

@@ -21,7 +21,7 @@ export async function getWalletByUserId(userId: string) {
   const repo = walletRepo();
   return repo.findOne({
     where: { userId },
-    select: ['id', 'userId', 'balance'] // select only these fields
+    relations: ['incoming', 'outgoing'],
   });
 }
 
