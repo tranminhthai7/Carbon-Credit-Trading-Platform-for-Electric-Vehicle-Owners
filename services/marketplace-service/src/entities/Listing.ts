@@ -28,8 +28,11 @@ export class Listing {
   @Column("double precision")
   pricePerCredit!: number;
 
+  @Column({ default: "FIXED_PRICE" }) // Thêm type: FIXED_PRICE hoặc AUCTION
+  type!: "FIXED_PRICE" | "AUCTION";
+
   @Column({ default: "OPEN" })
-  status!: "OPEN" | "SOLD";
+  status!: "OPEN" | "SOLD" | "CLOSED";
 
   @CreateDateColumn()
   created_at!: Date;

@@ -1,28 +1,36 @@
 //routes\index.ts
 import { Router } from "express";
-import { createListingHandler, getAllListingsHandler, getListingByIdHandler, getMyListingsHandler, buyListingHandler } from "../controllers/listingController";
+import { createListingHandler, getAllListingsHandler, getListingByIdHandler, getMyListingsHandler, buyListingHandler, updateListingHandler, cancelListingHandler } from "../controllers/listingController";
 import { authMiddleware } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
 import { getAllOrdersHandler, getSellerOrdersHandler, updateOrderStatusHandler } from "../controllers/orderController";
 import { placeBidHandler, getBidsHandler, closeAuctionHandler } from "../controllers/bidController";
 
-const router = Router();
+const listingRouter = Router();
 
 // Listing routes
-router.post("/listings", authMiddleware, requireRole(['ev_owner']), createListingHandler);//Tạo mới một listing (đăng bán tín chỉ carbon)
-router.get("/listings", getAllListingsHandler);//Lấy danh sách tất cả các listing hiện có (chưa bán hoặc đã bán)
-router.get("/listings/seller", authMiddleware, requireRole(['ev_owner']), getMyListingsHandler);//Lấy danh sách listing của người bán
-router.get("/listings/:id", getListingByIdHandler);//Lấy một listing theo id
-router.post("/listings/:id/purchase", authMiddleware, requireRole(['buyer']), buyListingHandler);//Người mua mua trực tiếp listing (giá cố định, không đấu giá)
+listingRouter.post("/", authMiddleware, requireRole(['ev_owner']), createListingHandler);//Tạo mới một listing (đăng bán tín chỉ carbon)
+listingRouter.get("/", getAllListingsHandler);//Lấy danh sách tất cả các listing hiện có (chưa bán hoặc đã bán)
+listingRouter.get("/seller", authMiddleware, requireRole(['ev_owner']), getMyListingsHandler);//Lấy danh sách listing của người bán
+listingRouter.get("/:id", getListingByIdHandler);//Lấy một listing theo id
+listingRouter.put("/:id", authMiddleware, requireRole(['ev_owner']), updateListingHandler);//Cập nhật listing (chỉ price)
+listingRouter.delete("/:id", authMiddleware, requireRole(['ev_owner']), cancelListingHandler);//Hủy listing
+listingRouter.post("/:id/purchase", authMiddleware, requireRole(['buyer']), buyListingHandler);//Người mua mua trực tiếp listing (giá cố định, không đấu giá)
 
-// Auction routes
-router.post("/listings/:id/bid", placeBidHandler); //Người mua đặt giá (bid) cho listing đấu giá
-router.get("/listings/:id/bids", getBidsHandler); //Xem tất cả các bid hiện có cho listing đó
-router.post("/listings/:id/close", closeAuctionHandler);//Kết thúc phiên đấu giá
+// Auction routes (on listings)
+listingRouter.post("/:id/bid", placeBidHandler); //Người mua đặt giá (bid) cho listing đấu giá
+listingRouter.get("/:id/bids", getBidsHandler); //Xem tất cả các bid hiện có cho listing đó
+listingRouter.post("/:id/close", closeAuctionHandler);//Kết thúc phiên đấu giá
+
+const orderRouter = Router();
 
 // Orders
-router.get("/orders", authMiddleware, getAllOrdersHandler);//Xem toàn bộ đơn hàng
-router.get("/orders/seller", authMiddleware, requireRole(['ev_owner']), getSellerOrdersHandler);//Xem đơn hàng của seller
-router.post("/orders/update", authMiddleware, requireRole(['ev_owner']), updateOrderStatusHandler);//Cập nhật trạng thái đơn hàng
+orderRouter.get("/", authMiddleware, getAllOrdersHandler);//Xem toàn bộ đơn hàng
+orderRouter.get("/seller", authMiddleware, requireRole(['ev_owner']), getSellerOrdersHandler);//Xem đơn hàng của seller
+orderRouter.post("/update", authMiddleware, requireRole(['ev_owner']), updateOrderStatusHandler);//Cập nhật trạng thái đơn hàng
 
-export default router;
+const bidRouter = Router();
+
+// Bids (if any direct bid routes, but currently on listings)
+
+export { listingRouter, orderRouter, bidRouter };

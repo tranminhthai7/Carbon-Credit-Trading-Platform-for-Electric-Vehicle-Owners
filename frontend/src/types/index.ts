@@ -114,6 +114,7 @@ export interface Listing {
   pricePerUnit: number;
   totalPrice: number;
   status: 'ACTIVE' | 'SOLD' | 'CANCELLED';
+  type: 'FIXED_PRICE' | 'AUCTION';
   createdAt: string;
   updatedAt: string;
 }

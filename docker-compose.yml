@@ -293,6 +293,7 @@ services:
       DB_NAME: carbon_credit_db
       DB_USER: ${POSTGRES_USER:-admin}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-secret123}
+      API_SECRET_KEY: ${API_SECRET_KEY:-your_api_secret_key}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-secret123}
@@ -445,7 +446,7 @@ services:
     volumes:
       - ./services/verification-service:/app
       - /app/node_modules
-    command: npm start
+    command: npm run dev
     restart: unless-stopped
 
   # Notification Service

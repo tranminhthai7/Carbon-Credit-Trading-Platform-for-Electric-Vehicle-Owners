@@ -27,6 +27,6 @@ export class Transaction {
   @Column()
   type!: TxType;
 
-  @CreateDateColumn()
+  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;
 }

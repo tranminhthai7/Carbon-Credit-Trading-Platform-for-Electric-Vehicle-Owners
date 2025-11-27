@@ -18,8 +18,8 @@ COPY *.js ./
 COPY *.ts ./
 COPY tsconfig.json ./
 
-# Build TypeScript -> dist
-RUN npm run build
+# Clean and build TypeScript -> dist
+RUN rm -rf dist && npm run build
 
 # Expose port
 EXPOSE 3004

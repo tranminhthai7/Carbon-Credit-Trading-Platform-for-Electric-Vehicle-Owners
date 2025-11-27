@@ -123,6 +123,13 @@ export async function issueCreditsHandler(req: Request, res: Response) {
   try {
     const { user_id, amount } = req.body;
     if (!user_id || typeof amount !== 'number') return res.status(400).json({ error: 'user_id and numeric amount required' });
+    
+    // Ensure wallet exists
+    let wallet = await walletService.getWalletByUserId(user_id);
+    if (!wallet) {
+      wallet = await walletService.createWallet(user_id);
+    }
+    
     const result = await walletService.mintCredits(user_id, amount);
     res.json({ success: true, data: result });
   } catch (err: any) {

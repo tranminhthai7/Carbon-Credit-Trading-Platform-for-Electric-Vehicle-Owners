@@ -10,7 +10,7 @@ export async function createWallet(userId: string) {
   const repo = walletRepo();
   let existing = await repo.findOne({
     where: { userId },
-    relations: ['incoming', 'outgoing']
+    select: ['id', 'userId', 'balance'] // select only these fields
   });
   if (existing) return existing;
   const wallet = repo.create({ userId, balance: 0 });
@@ -21,7 +21,7 @@ export async function getWalletByUserId(userId: string) {
   const repo = walletRepo();
   return repo.findOne({
     where: { userId },
-    relations: ['incoming', 'outgoing']
+    select: ['id', 'userId', 'balance'] // select only these fields
   });
 }
 
@@ -29,8 +29,10 @@ export async function mintCredits(userId: string, amount: number) {
   const repo = walletRepo();
   const txRepository = txRepo();
 
-  const wallet = await repo.findOneBy({ userId });
-  if (!wallet) throw new Error('Wallet not found');
+  let wallet = await repo.findOneBy({ userId });
+  if (!wallet) {
+    wallet = await createWallet(userId);
+  }
 
   wallet.balance = Number(wallet.balance) + Number(amount);
   await repo.save(wallet);

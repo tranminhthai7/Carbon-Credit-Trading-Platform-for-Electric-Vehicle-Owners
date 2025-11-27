@@ -20,9 +20,9 @@ const getListingRepo = () => {
   return AppDataSource.getRepository(Listing);
 };
 
-export async function createListing(userId: string, amount: number, pricePerCredit: number) {
+export async function createListing(userId: string, amount: number, pricePerCredit: number, type: "FIXED_PRICE" | "AUCTION" = "FIXED_PRICE") {
   const repo = getListingRepo();
-  const listing = repo.create({ userId, amount, pricePerCredit, status: "OPEN" });
+  const listing = repo.create({ userId, amount, pricePerCredit, type, status: "OPEN" });
   return repo.save(listing);
 }
 
@@ -44,6 +44,27 @@ export async function getUserListings(userId: string) {
   const repo = getListingRepo();
   console.log("repo:", repo);
   return repo.find({ where: { userId } });
+}
+
+export async function updateListing(listingId: string, userId: string, updates: Partial<Pick<Listing, 'pricePerCredit'>>) {
+  const repo = getListingRepo();
+  const listing = await repo.findOneBy({ id: listingId });
+  if (!listing) throw new Error("Listing not found");
+  if (listing.userId !== userId) throw new Error("Unauthorized: Listing does not belong to user");
+  if (listing.status !== "OPEN") throw new Error("Cannot update non-open listing");
+  Object.assign(listing, updates);
+  return repo.save(listing);
+}
+console.log("updateListing exported");
+
+export async function cancelListing(listingId: string, userId: string) {
+  const repo = getListingRepo();
+  const listing = await repo.findOneBy({ id: listingId });
+  if (!listing) throw new Error("Listing not found");
+  if (listing.userId !== userId) throw new Error("Unauthorized: Listing does not belong to user");
+  if (listing.status !== "OPEN") throw new Error("Cannot cancel non-open listing");
+  listing.status = "CLOSED";
+  return repo.save(listing);
 }
 
 export async function buyListing(listingId: string, buyerId: string, quantity: number) {

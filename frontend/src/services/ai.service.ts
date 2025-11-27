@@ -3,7 +3,6 @@ import { apiClient } from './api';
 export interface PriceSuggestion {
   suggested_price_per_credit: number;
   estimated_total: number;
-  confidence: number;
 }
 
 export const aiService = {

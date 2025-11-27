@@ -15,11 +15,17 @@ import {
   IconButton,
   Alert,
   Snackbar,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Add, Cancel, Edit } from '@mui/icons-material';
 import { marketplaceService } from '../../services/marketplace.service';
 import { aiService } from '../../services/ai.service';
+import { walletService } from '../../services/wallet.service';
+import { handleApiError } from '../../services/api';
 import { Listing } from '../../types';
 import { format } from 'date-fns';
 
@@ -38,12 +44,24 @@ export const ListingsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     quantity: '',
     pricePerUnit: '',
+    type: 'FIXED_PRICE' as 'FIXED_PRICE' | 'AUCTION',
   });
   const [aiLoading, setAiLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     fetchListings();
+    fetchWalletBalance();
   }, []);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const balanceData = await walletService.getBalance();
+      setWalletBalance(balanceData.balance);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+    }
+  };
 
   const fetchListings = async () => {
     try {
@@ -58,7 +76,7 @@ export const ListingsPage: React.FC = () => {
 
   const handleOpenCreateDialog = () => {
     setIsEditMode(false);
-    setFormData({ quantity: '', pricePerUnit: '' });
+    setFormData({ quantity: '', pricePerUnit: '', type: 'FIXED_PRICE' });
     setOpenDialog(true);
   };
 
@@ -86,6 +104,7 @@ export const ListingsPage: React.FC = () => {
     setFormData({
       quantity: listing.quantity.toString(),
       pricePerUnit: listing.pricePerUnit.toString(),
+      type: listing.type || 'FIXED_PRICE',
     });
     setOpenDialog(true);
   };
@@ -98,20 +117,27 @@ export const ListingsPage: React.FC = () => {
         });
         setSnackbar({ open: true, message: 'Listing updated successfully!', severity: 'success' });
       } else {
+        const quantity = Number(formData.quantity);
+        if (quantity > walletBalance) {
+          setSnackbar({ open: true, message: 'Insufficient credits. You cannot sell more than your wallet balance.', severity: 'error' });
+          return;
+        }
         await marketplaceService.createListing({
-          quantity: Number(formData.quantity),
+          quantity,
           pricePerUnit: Number(formData.pricePerUnit),
-          totalPrice: Number(formData.quantity) * Number(formData.pricePerUnit),
+          totalPrice: quantity * Number(formData.pricePerUnit),
+          type: formData.type,
         });
         setSnackbar({ open: true, message: 'Listing created successfully!', severity: 'success' });
       }
       setOpenDialog(false);
-      setFormData({ quantity: '', pricePerUnit: '' });
+      setFormData({ quantity: '', pricePerUnit: '', type: 'FIXED_PRICE' });
       setSelectedListing(null);
       fetchListings();
+      fetchWalletBalance(); // Refresh balance after creating listing
     } catch (error) {
       console.error('Failed to save listing:', error);
-      setSnackbar({ open: true, message: 'Failed to save listing', severity: 'error' });
+      setSnackbar({ open: true, message: handleApiError(error), severity: 'error' });
     }
   };
 
@@ -130,7 +156,7 @@ export const ListingsPage: React.FC = () => {
       fetchListings();
     } catch (error) {
       console.error('Failed to cancel listing:', error);
-      setSnackbar({ open: true, message: 'Failed to cancel listing', severity: 'error' });
+      setSnackbar({ open: true, message: handleApiError(error), severity: 'error' });
     }
   };
 
@@ -181,7 +207,9 @@ export const ListingsPage: React.FC = () => {
       headerName: 'Actions',
       width: 150,
       renderCell: (params) => {
-        if (params.row.status === 'ACTIVE') {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isOwner = params.row.sellerId === currentUser?.id;
+        if (params.row.status === 'ACTIVE' && isOwner) {
           return (
             <Box display="flex" gap={1}>
               <IconButton
@@ -267,10 +295,12 @@ export const ListingsPage: React.FC = () => {
             margin="normal"
             disabled={isEditMode}
             inputProps={{ min: 1 }}
-            error={formData.quantity !== '' && Number(formData.quantity) <= 0}
+            error={formData.quantity !== '' && (Number(formData.quantity) <= 0 || (!isEditMode && Number(formData.quantity) > walletBalance))}
             helperText={
               formData.quantity !== '' && Number(formData.quantity) <= 0
                 ? 'Quantity must be greater than 0'
+                : !isEditMode && formData.quantity !== '' && Number(formData.quantity) > walletBalance
+                ? `Insufficient credits. Available: ${walletBalance} kg`
                 : ''
             }
           />
@@ -289,6 +319,19 @@ export const ListingsPage: React.FC = () => {
                 : ''
             }
           />
+          {!isEditMode && (
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Listing Type</InputLabel>
+              <Select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'FIXED_PRICE' | 'AUCTION' })}
+                label="Listing Type"
+              >
+                <MenuItem value="FIXED_PRICE">Fixed Price</MenuItem>
+                <MenuItem value="AUCTION">Auction</MenuItem>
+              </Select>
+            </FormControl>
+          )}
           {!isEditMode && (
             <Button
               onClick={handleGetAISuggestion}
@@ -314,7 +357,8 @@ export const ListingsPage: React.FC = () => {
               !formData.quantity ||
               !formData.pricePerUnit ||
               Number(formData.quantity) <= 0 ||
-              Number(formData.pricePerUnit) <= 0
+              Number(formData.pricePerUnit) <= 0 ||
+              (!isEditMode && Number(formData.quantity) > walletBalance)
             }
           >
             {isEditMode ? 'Update' : 'Create'}

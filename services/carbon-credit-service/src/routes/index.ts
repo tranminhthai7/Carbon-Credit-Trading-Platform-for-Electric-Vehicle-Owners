@@ -13,10 +13,12 @@ import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
+router.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+
 router.post('/calculate/co2', calculateCO2);
 router.post('/wallet/create', authMiddleware, createWalletHandler);
 router.get('/wallet/:userId', authMiddleware, getWalletHandler);
-router.post('/wallet/mint', authMiddleware, mintHandler);
+router.post('/wallet/mint', mintHandler);
 router.post('/wallet/transfer', transferHandler);
 router.post('/wallet/credits/issue', authMiddleware, issueCreditsHandler);
 

@@ -3,6 +3,7 @@ console.log("listingController loaded");
 import { Request, Response } from "express";
 import * as listingService from "../services/listingService";
 console.log("listingService imported successfully");
+setTimeout(() => console.log("updateListing function:", typeof listingService.updateListing), 100);
 
 export async function createListingHandler(req: Request, res: Response) {
   try {
@@ -10,11 +11,12 @@ export async function createListingHandler(req: Request, res: Response) {
     if (!userId) {
       return res.status(401).json({ error: "User not authenticated" });
     }
-    const { amount, pricePerCredit } = req.body;
+    const { amount, pricePerCredit, type } = req.body;
     if (!amount || !pricePerCredit) {
       return res.status(400).json({ error: "amount, pricePerCredit required" });
     }
-    const listing = await listingService.createListing(userId, amount, pricePerCredit);
+    const listingType = type === "AUCTION" ? "AUCTION" : "FIXED_PRICE";
+    const listing = await listingService.createListing(userId, amount, pricePerCredit, listingType);
     res.json(listing);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -49,7 +51,6 @@ export async function getMyListingsHandler(req: Request, res: Response) {
   try {
     const userId = req.user?.id;
     console.log("getMyListingsHandler called with userId:", userId);
-    console.log("listingService keys:", Object.keys(listingService));
     console.log("has getUserListings:", typeof listingService.getUserListings);
     if (!userId) {
       return res.status(401).json({ error: "User not authenticated" });
@@ -74,6 +75,46 @@ export async function buyListingHandler(req: Request, res: Response) {
 
     const result = await listingService.buyListing(listingId, buyerId, quantity);
     res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
+  }
+}
+
+export async function updateListingHandler(req: Request, res: Response) {
+  try {
+    console.log("updateListingHandler called", req.params.id, req.body);
+    const listingId = req.params.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    const { pricePerCredit } = req.body;
+    if (!listingId) return res.status(400).json({ error: "Listing id required" });
+    if (pricePerCredit === undefined) return res.status(400).json({ error: "pricePerCredit required" });
+    console.log("Calling updateListing", listingId, { pricePerCredit: Number(pricePerCredit) });
+    const listingService = require("../services/listingService");
+    console.log("listingService keys in handler:", Object.keys(listingService));
+    const listing = await listingService.updateListing(listingId, userId, { pricePerCredit: Number(pricePerCredit) });
+    console.log("updateListing result", listing);
+    res.json(listing);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("updateListingHandler error", message);
+    res.status(400).json({ error: message });
+  }
+}
+
+export async function cancelListingHandler(req: Request, res: Response) {
+  try {
+    const listingId = req.params.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    if (!listingId) return res.status(400).json({ error: "Listing id required" });
+    const listing = await listingService.cancelListing(listingId, userId);
+    res.json(listing);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(400).json({ error: message });

@@ -22,6 +22,7 @@ function mapBackendListingToFrontend(b: any): Listing {
     pricePerUnit,
     totalPrice: Number(b.totalPrice ?? quantity * pricePerUnit),
     status: statusMap(b.status),
+    type: b.type ?? 'FIXED_PRICE',
     createdAt: b.createdAt ?? b.created_at ?? '',
     updatedAt: b.updatedAt ?? b.updated_at ?? b.createdAt ?? '',
   } as Listing;
@@ -53,12 +54,13 @@ export const marketplaceService = {
     const payload: any = {
       amount: raw.quantity ?? raw.amount,
       pricePerCredit: raw.pricePerUnit ?? raw.pricePerCredit,
+      type: raw.type,
     };
     const response = await apiClient.post<any>('/api/listings', payload);
     return mapBackendListingToFrontend(response.data);
   },
 
-  // Update listing
+  // Update a listing
   updateListing: async (listingId: string, listingData: Partial<Listing>): Promise<Listing> => {
     // Merge frontend update to backend expected keys
     const raw = listingData as any;

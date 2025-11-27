@@ -54,8 +54,10 @@ async function initializeApp() {
     // Register routes after DataSource is initialized so controllers/services
     // which depend on AppDataSource can import safely. Import routes dynamically
     // to avoid loading controllers before AppDataSource is set.
-    const routesModule = await import("./routes");
-    app.use("/", routesModule.default || routesModule);
+    const { listingRouter, orderRouter, bidRouter } = await import("./routes");
+    app.use("/listings", listingRouter);
+    app.use("/orders", orderRouter);
+    app.use("/bids", bidRouter);
 
     app.listen(PORT, () => console.log(`Marketplace Service running on port ${PORT}`));
   } catch (err) {

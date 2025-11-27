@@ -1,4 +1,5 @@
 //Wallet.ts
+// test
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
 import { Transaction } from './Transaction';
 
@@ -14,7 +15,7 @@ export class Wallet {
   @Column('double precision', { default: 0 })
   balance!: number;
 
-  @CreateDateColumn()
+  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;
 
   @OneToMany(() => Transaction, (tx) => tx.fromWallet)
