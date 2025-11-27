@@ -3,6 +3,7 @@ import { AppDataSource } from "../db";
 import { publishEvent } from "../config/mq";
 import { Order } from "../entities/Order";
 import { Listing } from "../entities/Listing";
+import { transferCredits } from "../utils/apiClient";
 
 const orderRepo = () => AppDataSource.getRepository('Order' as any);
 
@@ -54,5 +55,42 @@ export async function updateOrderStatus(orderId: string, status: "ACCEPTED" | "R
   } catch (err) {
     console.error('Could not publish order.updated event', err);
   }
+  return saved;
+}
+
+export async function getOrderById(orderId: string, userId?: string) {
+  const repo = orderRepo();
+  const order = await repo.findOneBy({ id: orderId });
+  if (!order) return null;
+  if (userId && (order.buyerId !== userId && order.sellerId !== userId)) return null; // Only buyer or seller can view
+  // Map totalPrice to totalAmount for frontend compatibility
+  return {
+    ...order,
+    totalAmount: order.totalPrice,
+    quantity: order.amount, // also map amount to quantity
+  };
+}
+
+export async function payOrder(orderId: string, userId: string) {
+  const repo = orderRepo();
+  const order = await repo.findOneBy({ id: orderId });
+  if (!order) throw new Error("Order not found");
+  if (order.buyerId !== userId) throw new Error("Unauthorized: Only buyer can pay for the order");
+  if (order.status !== "PENDING") throw new Error("Order is not in PENDING status");
+
+  // Transfer credits from buyer to seller
+  const transferResult = await transferCredits(order.buyerId, order.sellerId, order.amount);
+
+  // Update order status to COMPLETED
+  order.status = "COMPLETED";
+  const saved = await repo.save(order);
+
+  // Publish order.completed event
+  try {
+    await publishEvent('orders', { event: 'order.completed', data: saved });
+  } catch (err) {
+    console.error('Could not publish order.completed event', err);
+  }
+
   return saved;
 }

@@ -27,3 +27,30 @@ export async function updateOrderStatusHandler(req: Request, res: Response) {
     res.status(400).json({ error: message });
   }
 }
+
+export async function getOrderByIdHandler(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.id;
+    if (!id) return res.status(400).json({ error: "Order id required" });
+    const order = await orderService.getOrderById(id, userId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(order);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
+  }
+}
+
+export async function payOrderHandler(req: Request, res: Response) {
+  try {
+    const { orderId } = req.body;
+    const userId = (req as any).user?.id;
+    if (!orderId) return res.status(400).json({ error: "orderId required" });
+    const result = await orderService.payOrder(orderId, userId);
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(400).json({ error: message });
+  }
+}

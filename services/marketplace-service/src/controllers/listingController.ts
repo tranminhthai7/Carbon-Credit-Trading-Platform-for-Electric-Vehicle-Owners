@@ -74,7 +74,7 @@ export async function buyListingHandler(req: Request, res: Response) {
       return res.status(400).json({ error: "listingId, buyerId and quantity required" });
 
     const result = await listingService.buyListing(listingId, buyerId, quantity);
-    res.json(result);
+    res.json(result.order);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(400).json({ error: message });

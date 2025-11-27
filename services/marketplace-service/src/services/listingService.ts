@@ -75,11 +75,11 @@ export async function buyListing(listingId: string, buyerId: string, quantity: n
   if (listing.status === "SOLD") throw new Error("Already sold");
   if (quantity > listing.amount) throw new Error("Quantity exceeds available amount");
 
-  // Transfer credits first
-  const transferResult: any = await transferCredits(listing.userId, buyerId, quantity);
-  if (!transferResult || transferResult.status < 200 || transferResult.status >= 300 || transferResult.data?.success === false) {
-    throw new Error((transferResult && (transferResult.data?.message || transferResult.statusText)) || "Transfer failed");
-  }
+  // Do not transfer credits yet - wait for payment
+  // const transferResult: any = await transferCredits(listing.userId, buyerId, quantity);
+  // if (!transferResult || transferResult.status < 200 || transferResult.status >= 300 || transferResult.data?.success === false) {
+  //   throw new Error((transferResult && (transferResult.data?.message || transferResult.statusText)) || "Transfer failed");
+  // }
 
   // Use DB transaction to update listing and create order atomically
   const result = await AppDataSource.transaction(async (manager) => {

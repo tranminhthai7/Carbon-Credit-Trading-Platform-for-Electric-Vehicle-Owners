@@ -3,7 +3,7 @@ import { Router } from "express";
 import { createListingHandler, getAllListingsHandler, getListingByIdHandler, getMyListingsHandler, buyListingHandler, updateListingHandler, cancelListingHandler } from "../controllers/listingController";
 import { authMiddleware } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
-import { getAllOrdersHandler, getSellerOrdersHandler, updateOrderStatusHandler } from "../controllers/orderController";
+import { getAllOrdersHandler, getSellerOrdersHandler, updateOrderStatusHandler, payOrderHandler, getOrderByIdHandler } from "../controllers/orderController";
 import { placeBidHandler, getBidsHandler, closeAuctionHandler } from "../controllers/bidController";
 
 const listingRouter = Router();
@@ -27,7 +27,9 @@ const orderRouter = Router();
 // Orders
 orderRouter.get("/", authMiddleware, getAllOrdersHandler);//Xem toàn bộ đơn hàng
 orderRouter.get("/seller", authMiddleware, requireRole(['ev_owner']), getSellerOrdersHandler);//Xem đơn hàng của seller
+orderRouter.get("/:id", authMiddleware, getOrderByIdHandler);//Xem chi tiết đơn hàng theo id
 orderRouter.post("/update", authMiddleware, requireRole(['ev_owner']), updateOrderStatusHandler);//Cập nhật trạng thái đơn hàng
+orderRouter.post("/pay", authMiddleware, requireRole(['buyer']), payOrderHandler);//Thanh toán đơn hàng
 
 const bidRouter = Router();
 
